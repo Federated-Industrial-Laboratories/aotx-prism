@@ -33,6 +33,15 @@ def fixture(root, index):
     return package
 
 
+def batches(check):
+    def run(self):
+        for count in (1, 64):
+            for index in range(count):
+                with self.subTest(count=count, index=index):
+                    check(self, index)
+    return run
+
+
 class PackageTests(unittest.TestCase):
     def test_distinct_upgrades_and_preserved_projects(self):
         for count in (1, 64):
@@ -59,18 +68,19 @@ class PackageTests(unittest.TestCase):
                 self.assertFalse((prefix / 'bin/aotx-prism').is_symlink())
                 self.assertFalse((prefix / 'share/applications/aotx-prism.desktop').exists())
 
-    def test_changed_bytes_modes_and_extra_files_are_refused(self):
+    @batches
+    def test_changed_bytes_modes_and_extra_files_are_refused(self, index):
         for defect in ('bytes', 'mode', 'extra', 'link'):
             with self.subTest(defect=defect), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
-                source = fixture(root, 0)
+                source = fixture(root, index)
                 target = source / 'LICENSE'
                 if defect == 'bytes':
-                    target.write_text('Changed')
+                    target.write_text(f'Changed {index}')
                 elif defect == 'mode':
                     target.chmod(0o777)
                 elif defect == 'extra':
-                    (source / 'extra').write_text('Unexpected')
+                    (source / 'extra').write_text(f'Unexpected {index}')
                 else:
                     target.unlink()
                     target.symlink_to('/etc/passwd')
@@ -78,30 +88,32 @@ class PackageTests(unittest.TestCase):
                     operate('install', source, root / 'prefix')
                 self.assertFalse((root / 'prefix').exists())
 
-    def test_unrelated_target_and_unregistered_release_data_are_preserved(self):
+    @batches
+    def test_unrelated_target_and_unregistered_release_data_are_preserved(self, index):
         with tempfile.TemporaryDirectory() as temporary, contextlib.redirect_stdout(io.StringIO()):
             root = Path(temporary)
-            source = fixture(root, 0)
+            source = fixture(root, index)
             prefix = root / 'prefix'
             (prefix / 'bin').mkdir(parents=True)
             binary = prefix / 'bin/aotx-prism'
-            binary.write_text('Unrelated')
+            binary.write_text(f'Unrelated {index}')
             with self.assertRaises(ValueError):
                 operate('install', source, prefix)
-            self.assertEqual(binary.read_text(), 'Unrelated')
+            self.assertEqual(binary.read_text(), f'Unrelated {index}')
             binary.unlink()
             operate('install', source, prefix)
             extra = prefix / 'share/aotx-prism/current/project.txt'
-            extra.write_text('Preserve this file')
+            extra.write_text(f'Preserve file {index}')
             with self.assertRaises(ValueError):
                 operate('uninstall', source, prefix)
-            self.assertEqual(extra.read_text(), 'Preserve this file')
+            self.assertEqual(extra.read_text(), f'Preserve file {index}')
             self.assertTrue(binary.is_symlink())
 
-    def test_linked_parent_is_refused(self):
+    @batches
+    def test_linked_parent_is_refused(self, index):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            source = fixture(root, 0)
+            source = fixture(root, index)
             (root / 'other').mkdir()
             (root / 'prefix').symlink_to(root / 'other')
             with self.assertRaises(ValueError):
