@@ -37,6 +37,7 @@ try {
   await page.getByLabel('Generation profile name', { exact: true }).fill('Bounded response'); await page.getByRole('button', { name: 'Save current settings', exact: true }).click();
   await page.getByRole('button', { name: 'Close models', exact: true }).click();
   await page.getByRole('button', { name: '+ New conversation', exact: true }).click();
+    await page.getByRole('button', { name: 'Create conversation', exact: true }).click();
   async function turn(prompt) {
     await page.getByLabel('Message', { exact: true }).fill(prompt); await page.getByRole('button', { name: 'Send message', exact: true }).click();
     await waitState(page, state => !state.busy, 180000);
@@ -50,6 +51,7 @@ try {
   if (image && !process.env.PRISM_STOP_CHECK) {
     assert.ok(state.capabilities.models.find(m => m.id === state.project.model).input.includes('image'));
     await page.getByRole('button', { name: '+ New conversation', exact: true }).click();
+    await page.getByRole('button', { name: 'Create conversation', exact: true }).click();
     await app.evaluate(({ dialog }, file) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] }); }, resolve(image));
     await page.getByRole('button', { name: 'Attach media', exact: true }).click();
     await waitState(page, state => state.attachments.length === 1, 180000);

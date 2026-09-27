@@ -61,8 +61,8 @@ try {
   await page.getByRole('button',{name:'CCIR workspace',exact:true}).click(); await page.getByRole('button',{name:'Open shared workspace',exact:true}).click(); await waitState(page,s=>s.shared.connected);
   await page.getByRole('button',{name:new RegExp(fixture.space)}).click(); await page.getByRole('button',{name:new RegExp(fixture.conversation)}).click();
   await check('qualified dose reaches the exact shared mutation',async()=>{
-    await page.getByRole('button',{name:'Models',exact:true}).click(); await page.getByLabel('Control and dose',{exact:true}).selectOption('0:5000'); await waitState(page,s=>s.control?.dose===5000);
-    await page.getByRole('button',{name:'Close models',exact:true}).click(); await page.getByLabel('Shared message',{exact:true}).fill('Use the selected control.');
+    await page.getByRole('button',{name:'Affect',exact:true}).click(); await page.getByLabel('Control and dose',{exact:true}).selectOption('0:5000'); await waitState(page,s=>s.control?.dose===5000);
+    await page.getByRole('button',{name:'Close affect',exact:true}).click(); await page.getByLabel('Shared message',{exact:true}).fill('Use the selected control.');
     await page.getByRole('button',{name:'Send shared input',exact:true}).click(); await waitState(page,s=>s.shared.records[0]?.result?.saved_terminal&&!s.shared.watching.length);
     assert.equal(JSON.parse(fixture.posts[0]).control.qualification_sha256,identity(900,64)); assert.equal(fixture.posts.length,1);
   });
@@ -91,18 +91,14 @@ try {
     await page.getByText('Policy controls and counters',{exact:true}).click();
     assert.equal(await page.getByRole('button',{name:'Pause background work',exact:true}).isDisabled(),true);
   });
-  await check('optional rain remains readable and polling stops with the panel',async()=>{
-    await page.evaluate(()=>{ window.paintCount=0; const fill=CanvasRenderingContext2D.prototype.fillText; CanvasRenderingContext2D.prototype.fillText=function(...args){window.paintCount++;return fill.apply(this,args);}; });
-    await page.getByRole('button',{name:'Show visualization',exact:true}).click(); await page.locator('canvas.rain').waitFor();
+  await check('readable activity stops polling with the panel',async()=>{
+    assert.equal(await page.getByRole('button',{name:'Show visualization',exact:true}).count(),0);
     await page.getByLabel('Theme',{exact:true}).selectOption('graphite');
     await page.getByText('Policy controls and counters',{exact:true}).click();
     await page.locator('.panel-activity .form-panel').evaluate(e=>{e.scrollTop=0;});
     if(output) await page.screenshot({path:join(output,'activity-graphite.png')});
-    const moving=await page.evaluate(()=>window.paintCount); await page.waitForTimeout(400); assert.ok(await page.evaluate(()=>window.paintCount)>moving);
-    await page.emulateMedia({reducedMotion:'reduce'}); await page.waitForTimeout(180);
-    const quiet=await page.evaluate(()=>window.paintCount); await page.waitForTimeout(400); assert.equal(await page.evaluate(()=>window.paintCount),quiet);
-    assert.equal(await page.locator('canvas.rain').count(),1);
-    await page.getByRole('button',{name:'Hide visualization',exact:true}).click(); assert.equal(await page.locator('canvas.rain').count(),0);
+    assert.equal(await page.locator('canvas').count(),0);
+
     await page.getByRole('button',{name:'Close activity',exact:true}).click(); await page.waitForTimeout(300);
     const count=requests.filter(r=>r.path.endsWith('/policy')).length; await page.waitForTimeout(2800);
     assert.equal(requests.filter(r=>r.path.endsWith('/policy')).length,count); assert.equal(fixture.posts.length,1);

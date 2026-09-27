@@ -14,7 +14,7 @@ Target version: 0.1.0.
 - Add silver and graphite themes and an optional request activity window.
 - Add protocol, storage, lifecycle and visible desktop checks.
 - Add an internal application frame, metal panel headers and a rendered application mark.
-- Add readable activity tiles, optional visualization and panel maximize/restore controls.
+- Add readable activity tiles and panel maximize/restore controls.
 
 - Add owned runtime supervision, installation checks and saved machine profiles.
 - Add exact-model generation profiles, nested project files, names, archive and export.
@@ -26,9 +26,13 @@ Target version: 0.1.0.
 
 - Add scoped typed evidence views, exact references and explicit publication.
 - Add qualified model controls, reported affect and revision-bound policy actions.
-- Add background activity counters, readable events and optional bounded visualization.
+- Add background activity counters and readable events.
 
 - Add verified Linux packages, per-user installation, upgrades and removal.
 - Add installation and first-use guides.
+
+- Add dockable conversation setup with neutral, persistent system prompts.
+- Add revision-bound runtime affect settings and a separate model control window.
+- Remove the activity visualization.
 
 No application package is published.

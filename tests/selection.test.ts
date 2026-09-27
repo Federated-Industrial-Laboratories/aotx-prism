@@ -28,7 +28,7 @@ for (const count of [1, 64]) {
         await client.run({ type: 'send', id: client.state.selected, text: `Distinct profile request ${i}` }); await idle(client);
         const request = server.calls.filter(c => c.method === 'POST' && c.path.endsWith('/requests')).at(-1)!.body as any;
         assert.equal(request.model, 'text-1'); assert.equal(request.max_tokens, maxTokens); assert.equal(request.temperature, temperature);
-        assert.equal(request.messages[0].content, `Distinct profile request ${i}`);
+        assert.equal(request.messages[1].content, `Distinct profile request ${i}`);
       }
       assert.equal(server.calls.filter(c => c.method === 'POST' && c.path.endsWith('/requests')).length, count);
     } finally { await client.close(); await server.close(); rmSync(root, { recursive: true }); }
@@ -48,7 +48,7 @@ for (const count of [1, 64]) {
         for (const source of sources) { assert.ok(!seen.has(source.id)); seen.add(source.id); }
         await client.run({ type: 'send', id: client.state.selected, text: `Read sources ${i}.` }); await idle(client);
         const request = server.calls.filter(c => c.method === 'POST' && c.path.endsWith('/requests')).at(-1)!.body as any;
-        assert.deepEqual(request.messages[0].content.slice(1), sources.map(m => ({ type: 'media', media_id: m.id, modality: m.modality })));
+        assert.deepEqual(request.messages[1].content.slice(1), sources.map(m => ({ type: 'media', media_id: m.id, modality: m.modality })));
         assert.deepEqual(client.state.project.conversations[i].turns[0].media, sources);
         for (const source of sources) await client.run({ type: 'deleteMedia', id: source.id });
       }

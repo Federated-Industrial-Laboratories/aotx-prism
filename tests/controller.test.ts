@@ -35,7 +35,7 @@ test('conversation survives disconnect, GET recovery, cancellation and applicati
     await client.run({ type: 'cancel', id: second.id }); server.mode('normal'); await until(() => !client.state.busy);
     assert.equal(client.state.project.conversations[0].turns[1].phase, 'cancelled');
     const submission = server.calls.filter(c => c.method === 'POST' && c.path.endsWith('/requests')).at(-1)!.body as any;
-    assert.deepEqual(submission.messages.map((m: any) => m.role), ['user', 'assistant', 'user']);
+    assert.deepEqual(submission.messages.map((m: any) => m.role), ['system', 'user', 'assistant', 'user']);
     await client.close(); client = new Controller(folder, () => {});
     assert.equal(client.state.project.conversations[0].turns.length, 2);
     assert.ok(!JSON.stringify(client.state).includes(token));

@@ -41,6 +41,7 @@ export function Runtime() {
       {gpus.map(g => <option key={g.uuid} value={g.uuid}>{g.name} / {g.uuid.slice(-8)} / {g.freeMiB} MiB free</option>)}</select></label>
     <label>Active model role<select aria-label="Active model role" value={profile.role} onChange={e => edit('role', e.target.value)}>
       <option>language</option><option>language-q4</option><option>language-audio</option></select></label>
+    <label className="check-field"><input type="checkbox" checked={!!profile.affectManage} onChange={event => setProfile(p => ({ ...p, affectManage: event.target.checked }))} />Allow runtime affect controls</label>
     <label className="check-field"><input type="checkbox" checked={!!profile.policyManage} onChange={event => setProfile(p => ({ ...p, policyManage: event.target.checked }))} />Allow background policy controls</label>
     <p className="footnote">This grants policy actions to this owned runtime connection. It does not enable task reviews automatically.</p>
     <div className="button-row"><button disabled={checking} onClick={() => void check()}>{checking ? 'Checking installation...' : 'Check installation'}</button>

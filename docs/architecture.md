@@ -18,6 +18,7 @@ The client targets AOTX 0.3.5. Its ordinary inference routes are:
 | `POST /aotx/v1/media` | Selected JPEG or WAV bytes |
 | `GET /aotx/v1/media` | Current owned sources after complete or interrupted uploads |
 | `DELETE /aotx/v1/media/{id}` | Explicit removal of an unused source |
+| `GET, POST /aotx/v1/affect/settings` | Separately granted runtime settings |
 
 Remote connections require HTTPS. HTTP is permitted for exact loopback addresses
 and `localhost`. SSH tunnels can expose a remote gateway on loopback. Redirects
@@ -59,6 +60,8 @@ and oversized files are refused. Each path component is opened without following
 | --- | --- |
 | Conversations per project | 64 |
 | Turns per conversation | 128 |
+| Ordinary system prompt | 4,096 UTF-8 bytes |
+| CCIR system prompt | 2,048 UTF-8 bytes, when advertised |
 | Serialized project | 16 MiB |
 | Output per request | 1 MiB |
 | JSON HTTP response and request body | 2 MiB each |
@@ -66,7 +69,7 @@ and oversized files are refused. Each path component is opened without following
 | HTTP exchange deadline | 30 seconds; 300 seconds for media upload |
 | Text preview | 128 KiB |
 | Directory view | 128 entries, at most 4,096 inspected entries |
-| Saved layout | 256 KiB, twelve known panels |
+| Saved layout | 256 KiB, fourteen known panels |
 | Nested folder depth | 16 components |
 | Saved generation profiles | 32 per project |
 | Saved runtime profiles | 32 per desktop account |

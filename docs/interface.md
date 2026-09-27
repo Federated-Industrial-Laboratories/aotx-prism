@@ -23,9 +23,7 @@ Focus outlines identify keyboard controls. Status text accompanies colored marks
 Panels can float, dock, resize and maximize. Restore returns to the previous layout.
 Closing a panel does not close its conversation or cancel device work.
 
-Activity opens with readable status tiles. The visualization stays hidden until
-**Show visualization** is selected. Its field moves only while the runtime reports active work.
-Reduced motion stops animation. Hiding the visualization removes its canvas.
+Activity opens with readable status tiles and event lists. It has no animated visualization.
 
 Activity reports policy counters and accessible conversation events. Event pages
 are separate from the shared workspace page. Refresh keeps the selected page.

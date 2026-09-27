@@ -6,7 +6,7 @@
 .panel-tools button { padding: 3px 7px; font-size: 10px; background: var(--control); }
 .form-panel { overflow: auto; padding: 22px; flex: 1; }
 .form-panel label { display: block; font-size: 12px; margin: 16px 0; }
-.form-panel label > input, .form-panel label > select { display: block; margin-top: 7px; }
+.form-panel label > input, .form-panel label > select, .form-panel label > textarea { display: block; margin-top: 7px; }
 .form-panel .footnote { margin-top: 17px; }
 .button-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 13px 0; }
 .field-pair { display: flex; gap: 12px; }
@@ -24,7 +24,6 @@ dd { margin: 5px 0 17px; overflow-wrap: anywhere; line-height: 1.5; font-size: 1
 .file-list strong { font-weight: normal; overflow-wrap: anywhere; }
 .file-list small { margin-left: auto; font-size: 10px; white-space: nowrap; color: var(--muted); }
 .file-preview { font: 11px/1.6 JetBrains, monospace; background: var(--surface); padding: 14px; border: 1px solid var(--line); }
-.rain { width: 100%; height: 220px; display: block; border: 1px solid var(--line); margin-top: 17px; }
 .conversation-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .conversation-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 17px 24px 13px; border-bottom: 1px solid var(--line); }
 .conversation-heading button { max-width: 40%; overflow-wrap: anywhere; }
@@ -66,9 +65,6 @@ dd { margin: 5px 0 17px; overflow-wrap: anywhere; line-height: 1.5; font-size: 1
 .activity-tile { border: 1px solid var(--line); background: var(--raised); }
 .activity-tile h3 { margin: 0; padding: 8px 12px; background: var(--metal); border-bottom: 1px solid var(--frame); font-size: 12px; }
 .activity-tile p { margin: 0; padding: 15px 12px; font-size: 16px; }
-.visualisation-panel { border: 1px solid var(--frame); margin-top: 18px; background: var(--raised); }
-.visualisation-panel > p { padding: 10px 12px; margin: 0; }
-.visualisation-panel .rain { margin: 0; border: 0; height: min(48vh, 480px); min-height: 220px; }
 @media (max-height: 780px) { .welcome { margin-top: 20px; } .welcome-heading img { width: 68px; height: 68px; } .welcome-heading { margin-bottom: 14px; } .steps { margin: 14px auto; } .conversation-heading { padding-block: 10px; } .composer { margin-bottom: 12px; } .composer textarea { height: 75px; } }
 @container (max-width: 570px) { .steps { grid-template-columns: 1fr; } .welcome-heading img { display: none; } .welcome h2 { font-size: 17px; } }
 .conversation-view { container-type: inline-size; }
@@ -106,3 +102,8 @@ dd { margin: 5px 0 17px; overflow-wrap: anywhere; line-height: 1.5; font-size: 1
 .check-field { display: flex !important; align-items: center; gap: 8px; }
 .check-field input { width: auto; }
 .evidence-body dl > div, .form-panel dl > div { display: contents; }
+
+.conversation-prompt { padding: 8px 24px; border-bottom: 1px solid var(--line); }
+.conversation-prompt p { white-space: pre-wrap; }
+
+.form-panel label > textarea { width: 100%; min-height: 140px; resize: vertical; }

@@ -60,6 +60,19 @@ This launcher does not supply native policy trust. Use a configured external gat
 
 Register the current participant when the interface requests registration.
 Create a space or select one with the required rights. Then create or select a conversation.
+
+Select **New CCIR conversation** to set its name and system prompt.
+The default prompt assigns no name or runtime role. A blank prompt adds no role instructions.
+The runtime still supplies memory rules, authenticated actor context and model formatting.
+Instructions remain fixed for that conversation. Start another conversation to change them.
+
+The selected conversation exposes its exact saved prompt when the gateway supports this feature.
+Existing conversations keep their inherited runtime role.
+
+Prompt support must be advertised by the connected backend. Update both the core
+and gateway to use it. Earlier core versions cannot replay the new prompt records.
+Keep a stopped-file copy before upgrading an existing runtime.
+
 Space and conversation names are local project labels. Their persistent IDs remain visible.
 
 | Scope | Access and memory boundary |

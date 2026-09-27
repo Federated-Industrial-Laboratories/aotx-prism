@@ -22,7 +22,7 @@ function App() {
       {state.connected ? 'Gateway connected' : 'Gateway disconnected'}</span><span>AOTX-PRISM / {state.version}</span></div>
     <nav className="menu-bar" aria-label="Application menu">
       <button onClick={() => windows.open('project')}>Project</button><button onClick={() => windows.open('connection')}>Connection</button>
-      <button onClick={() => windows.open('models')}>Models</button><button onClick={() => windows.open('runtime')}>Runtime setup</button>
+      <button onClick={() => windows.open('models')}>Models</button><button onClick={() => windows.open('affect')}>Affect</button><button onClick={() => windows.open('runtime')}>Runtime setup</button>
       <button onClick={() => windows.open('shared', false)}>CCIR workspace</button>
       <div className="window-menu"><button aria-expanded={menu} onClick={() => setMenu(!menu)}>Windows</button>
         {menu && <div className="menu-popup" onKeyDown={e => { if (e.key === 'Escape') setMenu(false); }}>
@@ -33,9 +33,7 @@ function App() {
     </nav>
     <div className="app-body"><aside className="sidebar"><div className="project-card"><span className="eyebrow">CURRENT PROJECT</span>
       <h2>{state.project.name}</h2><button className="path" title={state.folder} onClick={() => windows.open('project')}>{state.folder}</button></div>
-      <button className="new-conversation" onClick={async () => {
-        const reply = await send({ type: 'newConversation', title: `Conversation ${state.project.conversations.length + 1}` }); if (reply) windows.open('conversation', false);
-      }}>+ New conversation</button><div className="sidebar-label">CONVERSATIONS <span>{state.project.conversations.length}</span></div>
+      <button className="new-conversation" onClick={() => windows.setup('ordinary')}>+ New conversation</button><div className="sidebar-label">CONVERSATIONS <span>{state.project.conversations.length}</span></div>
       <div className="conversation-list">{state.project.conversations.filter(c => !c.archived).map(c => <button key={c.id} className={state.selected === c.id ? 'selected' : ''} onClick={() => {
         void send({ type: 'select', id: c.id }); windows.open('conversation', false);
       }}><span className="conversation-icon">#</span><span>{c.title}<small>{c.turns.length} {c.turns.length === 1 ? 'message' : 'messages'}</small></span></button>)}</div>

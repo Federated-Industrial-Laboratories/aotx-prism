@@ -56,6 +56,7 @@ try {
   });
   await check('nonmodal setup permits conversation editing and dock resize', async () => {
     await page.getByRole('button', { name: '+ New conversation', exact: true }).click();
+    await page.getByRole('button', { name: 'Create conversation', exact: true }).click();
     await page.getByRole('button', { name: 'Connection', exact: true }).click();
     await page.getByLabel('Message', { exact: true }).fill('Hello from the desktop.');
     assert.equal(await page.getByLabel('Message', { exact: true }).inputValue(), 'Hello from the desktop.');
@@ -109,8 +110,7 @@ try {
       const style = getComputedStyle(element); return style.color !== style.backgroundColor;
     }), true);
     if (output) await page.screenshot({ path: join(output, 'floating-graphite.png') });
-    await page.getByRole('button', { name: 'Show visualization', exact: true }).click();
-    assert.equal(await page.locator('canvas').count(), 1);
+    assert.equal(await page.getByRole('button', { name: 'Show visualization', exact: true }).count(), 0);
     const before = await page.locator('[data-panel="activity"]').boundingBox();
     await page.getByRole('button', { name: 'Maximize activity', exact: true }).click();
     await page.getByRole('button', { name: 'Restore activity', exact: true }).waitFor();
@@ -121,7 +121,6 @@ try {
     const restored = await page.locator('[data-panel="activity"]').boundingBox();
     assert.ok(Math.abs(restored.width - before.width) < 2);
     assert.equal(await page.locator('.dv-resize-container [data-panel="activity"]').count(), 1);
-    await page.getByRole('button', { name: 'Hide visualization', exact: true }).click();
     assert.equal(await page.locator('canvas').count(), 0);
     await page.getByRole('button', { name: 'Close activity', exact: true }).click();
     assert.equal(await page.locator('canvas').count(), 0);
@@ -134,50 +133,6 @@ try {
     await page.getByRole('button', { name: 'Maximize conversation', exact: true }).click();
     await page.getByRole('button', { name: 'Restore conversation', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Restore conversation', exact: true }).click();
-  });
-  await check('inactive activity stops painting while request reading continues', async () => {
-    server.mode('hold');
-    await page.getByRole('button', { name: '+ New conversation', exact: true }).click();
-    await page.getByLabel('Message', { exact: true }).fill('Keep the request active for the panel check.');
-    await page.getByRole('button', { name: 'Send message', exact: true }).click();
-    await page.locator('.phase-running').waitFor();
-    await page.getByRole('button', { name: 'Windows', exact: true }).click();
-    await page.getByRole('button', { name: 'Activity', exact: true }).click();
-    await page.getByRole('button', { name: 'Show visualization', exact: true }).click();
-    const source = await page.locator('[data-tab-panel-id="activity"]').boundingBox();
-    const target = await page.locator('[data-panel="conversation"]').boundingBox();
-    await page.mouse.move(source.x + 20, source.y + source.height / 2); await page.mouse.down();
-    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 15 }); await page.mouse.up();
-    assert.equal(await page.evaluate(() => document.querySelector('[data-tab-panel-id="activity"]').closest('.dv-groupview') ===
-      document.querySelector('[data-tab-panel-id="conversation"]').closest('.dv-groupview')), true);
-    await page.evaluate(() => {
-      window.paintCount = 0;
-      const fill = CanvasRenderingContext2D.prototype.fillRect;
-      CanvasRenderingContext2D.prototype.fillRect = function (...args) { window.paintCount++; return fill.apply(this, args); };
-    });
-    await page.waitForFunction(() => window.paintCount > 1);
-    await page.locator('[data-tab-panel-id="conversation"]').click();
-    await page.waitForFunction(() => document.querySelectorAll('canvas').length === 0);
-    await page.evaluate(() => { window.paintCount = 0; });
-    const reads = server.calls.length;
-    await new Promise(resolve => setTimeout(resolve, 450));
-    assert.equal(await page.evaluate(() => window.paintCount), 0);
-    assert.ok(server.calls.length > reads);
-    assert.equal((await page.evaluate(() => window.prism.command({ type: 'state' }))).state.busy, true);
-    await page.locator('[data-tab-panel-id="activity"]').click();
-    await page.waitForFunction(() => window.paintCount > 1);
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await new Promise(resolve => setTimeout(resolve, 100));
-    await page.evaluate(() => { window.paintCount = 0; });
-    await new Promise(resolve => setTimeout(resolve, 450));
-    assert.equal(await page.evaluate(() => window.paintCount), 0);
-    await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await page.locator('[data-tab-panel-id="conversation"]').click();
-    await page.getByRole('button', { name: 'Cancel request', exact: true }).click();
-    await page.locator('.phase-cancelled').waitFor();
-    await page.locator('[data-tab-panel-id="activity"]').click();
-    await page.locator('[data-tab-panel-id="activity"]').getByRole('button', { name: 'Close Activity', exact: true }).click();
-    server.mode('normal');
   });
   await check('close and reopen the actual saved project', async () => {
     await app.close(); page = await launch();

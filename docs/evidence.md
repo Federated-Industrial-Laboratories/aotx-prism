@@ -46,7 +46,7 @@ supply new generated advice. PRISM does not author new task bindings through HTT
 
 ## Select a qualified control
 
-Open **Models** and use **Control and dose**. Only advertised, qualified pairs can
+Open **Affect** and use **Control and dose**. Only advertised, qualified pairs can
 be selected. PRISM sends the exact qualification digest and discrete dose.
 It does not interpolate doses or combine controls. Unsupported control formats
 remain unavailable while ordinary model use remains possible.
@@ -69,14 +69,37 @@ Policy work is distinct from foreground input.
 A quiet or unavailable policy does not imply hidden model activity.
 
 Observation refreshes while the panel and application are visible. Closing the
-panel stops future reads. **Show visualization** opens the optional rain field.
+panel stops future reads. Use **Maximize** and **Restore** to change its size.
 
-Use the panel's **Maximize** and **Restore** controls to change its size. The field
-uses reported counters and event identifiers. It generates no model requests.
-Reduced motion disables animation. Read the tiles for exact values.
+## Change runtime affect settings
 
-Affect is displayed as reported runtime state, including probe availability.
-It does not describe a person's emotions. The gateway has no affect setter.
+Open **Affect** to read runtime settings and the selected CCIR state.
+Settings apply to native and CCIR sequences across the connected runtime.
+Ordinary HTTP chats bypass persistent affect and use qualified model controls.
+
+1. Select **Refresh affect settings**.
+2. Select a setting.
+3. Enter a value within the displayed range.
+4. Select **Apply setting**.
+5. Check the returned value and revision.
+
+Reads require telemetry or affect management permission. Changes require the
+separate `affect_manage` grant. For an owned runtime, select **Allow runtime affect
+controls** before starting. An external gateway's operator supplies its grants.
+Older gateways can report this feature as unavailable.
+
+Each change carries the current epoch and exact settings revision. A stale,
+refused or uncertain write is not repeated. Refresh before another change.
+A permission refusal disables writes until reconnect. Pending local setting
+changes also prevent remote writes.
+
+Changes apply to the next sequence. Running replies keep their captured settings.
+Settings do not qualify missing probes or steering assets. Use **Refresh scoped
+affect** to inspect the selected CCIR state and its probe availability.
+These values describe runtime state, not a person's emotions.
+
+An accepted setting is separate from durable storage. Select **Save CCIR state**
+and inspect its saved receipt in the shared workspace before relying on recovery.
 
 ## Control policy work
 

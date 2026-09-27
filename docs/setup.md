@@ -88,3 +88,14 @@ references. Start a new conversation when its media belongs to another runtime.
 An interrupted upload is not retried. Refresh the source list before selecting
 the file again. Match its digest and byte count to identify an accepted upload.
 Media availability does not establish general visual or audio accuracy.
+
+## Conversation instructions
+
+Select **New conversation** to open the setup window. Choose ordinary or CCIR use,
+set a name and edit the system prompt. The neutral default assigns no model identity.
+**Use neutral default** restores that text. An empty field is permitted.
+
+Ordinary instructions are saved with local history and precede its messages.
+Existing histories without this field keep their original request format.
+CCIR instructions require an available shared space and advertised prompt support.
+The runtime saves their exact bytes. Existing conversations keep their instructions.

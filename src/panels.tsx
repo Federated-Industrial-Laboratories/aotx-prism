@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Present nonmodal project, connection, model and request panels.
 import { Evidence } from './evidence';
-import { Controls } from './controls';
+import { Affect } from './affect';
 import { useEffect, useState } from 'react';
 import type { IDockviewPanelProps } from 'dockview';
 import { Project, Files } from './projects';
@@ -10,7 +10,8 @@ import { MediaSources } from './sources';
 import { useStore, send } from './store';
 import { windows, type PanelId } from './windows';
 import { Conversation } from './conversation';
-import { Activity } from './rain';
+import { Activity } from './activity';
+import { ConversationSetup } from './conversation-setup';
 import { SharedWorkspace } from './shared-workspace';
 import { CcirFiles } from './ccir-files';
 function Connection() {
@@ -42,7 +43,7 @@ function Models() {
       <div className="field-pair"><label>Maximum output tokens<input aria-label="Maximum output tokens" type="number" min="1" max={caps.outputTokens} value={tokens} onChange={e => setTokens(Number(e.target.value))} /></label>
         <label>Temperature<input aria-label="Temperature" type="number" min="0" max="2" step="0.1" value={temperature} onChange={e => setTemperature(Number(e.target.value))} /></label></div>
       <button className="primary" disabled={!state.connected} onClick={() => void send({ type: 'profile', model, maxTokens: tokens, temperature })}>Apply settings</button>
-      <Controls />
+      <button onClick={() => windows.open('affect')}>Affect and qualified controls</button>
       <h3>Generation profiles</h3><label>Profile name<input aria-label="Generation profile name" value={profileName} onChange={e => setProfileName(e.target.value)} /></label>
       <button disabled={!profileName} onClick={() => void send({ type: 'saveProfile', name: profileName })}>Save current settings</button>
       {state.project.profiles.map(p => <div className="button-row" key={p.name}><span>{p.name}</span><button onClick={() => void send({ type: 'applyProfile', name: p.name })}>Apply {p.name}</button>
@@ -70,7 +71,7 @@ function Inspector() {
     </>}
   </div>;
 }
-const panels = { evidence: Evidence, conversation: Conversation, connection: Connection, project: Project, models: Models, files: Files, runtime: Runtime, sources: MediaSources, inspector: Inspector, activity: Activity, shared: SharedWorkspace, ccir: CcirFiles };
+const panels = { affect: Affect, setup: ConversationSetup, evidence: Evidence, conversation: Conversation, connection: Connection, project: Project, models: Models, files: Files, runtime: Runtime, sources: MediaSources, inspector: Inspector, activity: Activity, shared: SharedWorkspace, ccir: CcirFiles };
 export function Panel(props: IDockviewPanelProps) {
   const id = props.api.id as PanelId, Component = panels[id];
   const [maximized, setMaximized] = useState(false);
@@ -86,6 +87,6 @@ export function Panel(props: IDockviewPanelProps) {
       <button aria-label={`Float ${id}`} onClick={() => windows.float(id)}>Float</button>
       <button aria-label={`Dock ${id}`} onClick={() => windows.dock(id)}>Dock</button>
       <button aria-label={`${maximized ? 'Restore' : 'Maximize'} ${id}`} onClick={() => windows.maximize(id)}>{maximized ? 'Restore' : 'Maximize'}</button>
-      <button aria-label={`Close ${id}`} onClick={() => windows.close(id)}>Close</button></div>{id === 'activity' ? <Activity visible={visible} /> : <Component />}
+      <button aria-label={`Close ${id}`} onClick={() => windows.close(id)}>Close</button></div>{id === 'activity' ? <Activity visible={visible} /> : id === 'setup' ? <ConversationSetup initialKind={props.params.kind || 'ordinary'} /> : <Component />}
   </section>;
 }
