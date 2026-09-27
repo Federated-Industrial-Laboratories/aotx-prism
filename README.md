@@ -9,8 +9,8 @@ project folder and hold ordinary model conversations. Move, resize and dock
 utility windows without closing the conversation.
 Use complete CCIR files for persistent shared spaces and conversations.
 
-The development version is **0.1.0**. Source builds are available. No installer,
-version tag or application release is published.
+The development version is **0.1.0**. Source builds and local Linux packaging
+are available. No version tag or application release is published.
 
 ## Current capabilities
 
@@ -29,6 +29,9 @@ version tag or application release is published.
 | Activity window | Background counters, conversation event pages and an optional rain field |
 
 Model-driven file changes and command execution are outside the first release.
+
+Read [first use](docs/first-use.md) for workflow choices, keyboard controls and recovery.
+See [Linux installation](docs/install.md) for packages, upgrades and removal.
 
 ## Build and start
 

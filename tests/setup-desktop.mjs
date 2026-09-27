@@ -12,7 +12,7 @@ mkdirSync(join(project, 'notes'), { recursive: true }); writeFileSync(join(proje
 const jpg = join(root, 'sample.jpg'); writeFileSync(jpg, Buffer.from([255,216,255,224,0,16,74,70,73,70,0,1,1,0,0,1,0,1,0,0]));
 const server = await fixture(true), checks = [], errors = [], env = { ...process.env, PRISM_STATE_DIR: join(root, 'state') }; delete env.ELECTRON_RUN_AS_NODE;
 if (output) mkdirSync(output, { recursive: true });
-const app = await electron.launch({ executablePath: resolve('node_modules/electron/dist/electron'), args: ['.'], env });
+const app = await electron.launch({ executablePath: process.env.PRISM_TEST_PACKAGE ? resolve(process.env.PRISM_TEST_PACKAGE, 'runtime/electron') : resolve('node_modules/electron/dist/electron'), args: [process.env.PRISM_TEST_PACKAGE ? resolve(process.env.PRISM_TEST_PACKAGE, 'app') : '.'], env });
 try {
   const page = await app.firstWindow(); page.on('pageerror', e => errors.push(e.message));
   await page.getByText('Conversation workspace', { exact: true }).waitFor();

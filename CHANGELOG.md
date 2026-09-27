@@ -28,4 +28,7 @@ Target version: 0.1.0.
 - Add qualified model controls, reported affect and revision-bound policy actions.
 - Add background activity counters, readable events and optional bounded visualization.
 
+- Add verified Linux packages, per-user installation, upgrades and removal.
+- Add installation and first-use guides.
+
 No application package is published.

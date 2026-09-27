@@ -31,7 +31,7 @@ else {
     session.defaultSession.setPermissionCheckHandler(() => false);
     Menu.setApplicationMenu(null);
     const win = new BrowserWindow({ width: 1440, height: 960, minWidth: 860, minHeight: 620,
-      title: 'AOTX-PRISM', backgroundColor: '#e9e9e8', show: false,
+      title: 'AOTX-PRISM', icon: join(root, 'dist/prism-rendered.png'), backgroundColor: '#e9e9e8', show: false,
       webPreferences: { preload: join(dirname(fileURLToPath(import.meta.url)), 'preload.cjs'),
         contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, spellcheck: false } });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));

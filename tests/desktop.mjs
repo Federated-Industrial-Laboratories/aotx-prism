@@ -16,7 +16,7 @@ const server = await fixture(), checks = [], errors = [];
 let app;
 const env = { ...process.env, PRISM_STATE_DIR: join(temporary, 'desktop') }; delete env.ELECTRON_RUN_AS_NODE;
 async function launch() {
-  app = await electron.launch({ executablePath: resolve('node_modules/electron/dist/electron'), args: ['.'], env });
+  app = await electron.launch({ executablePath: process.env.PRISM_TEST_PACKAGE ? resolve(process.env.PRISM_TEST_PACKAGE, 'runtime/electron') : resolve('node_modules/electron/dist/electron'), args: [process.env.PRISM_TEST_PACKAGE ? resolve(process.env.PRISM_TEST_PACKAGE, 'app') : '.'], env });
   const page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
   await page.getByText('Conversation workspace', { exact: true }).waitFor(); return page;
 }
@@ -33,6 +33,12 @@ try {
     assert.ok(await page.locator('.brand img').evaluate(image => image.complete && image.naturalWidth > 0));
     assert.equal(await page.getByRole('heading', { name: 'Connect to AOTX', exact: true }).count(), 1);
     assert.equal(await page.locator('.shell-cap').getAttribute('aria-hidden'), 'true');
+    await page.getByRole('button', { name: 'Project', exact: true }).focus();
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Connection');
+    await page.keyboard.press('Enter');
+    await page.getByLabel('Gateway URL', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Close connection', exact: true }).click();
   });
   await check('open project folder and local file preview', async () => {
     await page.getByRole('button', { name: 'Project', exact: true }).click();
@@ -188,7 +194,7 @@ try {
     assert.ok(!database.includes(Buffer.from(token)));
   });
   assert.deepEqual(errors, []); checks.push('no renderer errors');
-  if (output) writeFileSync(join(output, 'desktop.json'), JSON.stringify({ checks, errors, source: 'local HTTP fixture; no GPU inference claim' }, null, 2));
+  if (output) writeFileSync(join(output, 'desktop.json'), JSON.stringify({ package: process.env.PRISM_TEST_PACKAGE || null, checks, errors, source: 'local HTTP fixture; no GPU inference claim' }, null, 2));
 } catch (error) {
   if (app && output) await (await app.firstWindow()).screenshot({ path: join(output, 'failure.png') }).catch(() => {});
   throw error;
