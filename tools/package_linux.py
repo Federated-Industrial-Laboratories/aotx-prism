@@ -78,8 +78,16 @@ def build(output):
                     'electron': (electron / 'version').read_text().strip(), 'files': verify_module.inventory(destination)}
         (destination / 'manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
         verify_module.verify(destination)
-        with tarfile.open(archive, 'w:gz') as tar:
-            tar.add(destination, arcname=name)
+        timestamp = int(git('show', '-s', '--format=%ct', commit))
+        def metadata(info):
+            info.uid = info.gid = 0
+            info.uname = info.gname = ''
+            info.mtime = timestamp
+            if info.isdir():
+                info.mode = 0o755
+            return info
+        with tarfile.open(archive, 'w:gz', compresslevel=6) as tar:
+            tar.add(destination, arcname=name, filter=metadata)
         shutil.copyfile(destination / 'manifest.json', output / f'{name}.manifest.json')
     checksum = verify_module.digest(archive)
     archive.with_suffix(archive.suffix + '.sha256').write_text(f'{checksum}  {archive.name}\n')

@@ -29,6 +29,11 @@ try{
   const page=await launch();assert.equal(await page.getByLabel('Theme',{exact:true}).inputValue(),'graphite');await openProject(page);
   await page.locator('.conversation-list button').filter({hasText:'Preserved conversation'}).waitFor();
   const snapshot=(await page.evaluate(()=>window.prism.command({type:'state'}))).state;assert.equal(snapshot.runtime.phase,'stopped');assert.equal(snapshot.connected,false);assert.equal(snapshot.project.conversations.length,1);
+  const invalid={name:'Unavailable installation',build:join(root,'absent'),gateway:root,python:'/usr/bin/python3',models:root,modules:root,folder:root,gpu:'GPU-00000000-0000-0000-0000-000000000001',role:'language'};
+  await page.evaluate(profile=>window.prism.command({type:'runtimeStart',profile}),invalid);
+  await page.waitForFunction(async()=> (await window.prism.command({type:'state'})).state.runtime.phase==='failed');
+  const failed=(await page.evaluate(()=>window.prism.command({type:'state'}))).state.runtime;assert.match(failed.error,/ENOENT/);
+  await page.evaluate(()=>window.prism.command({type:'runtimeStop'}));
   if(output)await page.screenshot({path:join(output,'upgraded-project.png')});await app.close();app=undefined;
  });
  await check('uninstall preserves exact project bytes and desktop preferences',async()=>{
