@@ -15,7 +15,7 @@ const env = { ...process.env, PRISM_STATE_DIR: temporary }; delete env.ELECTRON_
 const app = await electron.launch({ executablePath: resolve('node_modules/electron/dist/electron'), args: ['.'], env });
 const report = { checks: [], turns: [], state: temporary };
 try {
-  const page = await app.firstWindow(); await page.getByText('A clear place to begin', { exact: true }).waitFor();
+  const page = await app.firstWindow(); await page.getByText('Conversation workspace', { exact: true }).waitFor();
   await page.getByRole('button', { name: 'Connection', exact: true }).click();
   await page.getByLabel('Gateway URL', { exact: true }).fill(config.url);
   await page.getByLabel('Bearer token', { exact: true }).fill(config.token);

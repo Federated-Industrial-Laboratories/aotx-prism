@@ -18,20 +18,23 @@ export function Conversation() {
   }
   return <div className="conversation-view">
     <div className="conversation-heading"><div><span className="eyebrow">ORDINARY CONVERSATION</span>
-      <h1>{conversation?.title || 'A clear place to begin'}</h1></div>
+      <h1>{conversation?.title || 'Conversation workspace'}</h1></div>
       <button className="subtle" onClick={() => windows.open('models')}>{state.project.model || 'Select model'}</button></div>
     <div className="messages" aria-label="Conversation messages" aria-live="polite" aria-relevant="additions">
       {!conversation?.turns.length && <div className="welcome">
-        <img src="/prism.svg" alt="" /><p className="eyebrow">PROJECT / RUNTIME / SESSION</p>
-        <h2>Your workspace, connected.</h2>
-        <p>Open a project folder. Connect to AOTX. Start a conversation with an available model.</p>
-        <div className="steps"><button onClick={() => windows.open('project')}><b>01</b> Open project</button>
-          <button onClick={() => windows.open('connection')}><b>02</b> Connect gateway</button>
-          <button onClick={() => void send({ type: 'newConversation', title: `Conversation ${state.project.conversations.length + 1}` })}><b>03</b> New conversation</button></div>
-        <p className="footnote">History stays in your project folder. These conversations do not update CCIR memory.</p>
+        <div className="welcome-heading"><img src="/prism-rendered.png" alt="" /><div><p className="eyebrow">PROJECT / CONVERSATION</p>
+          <h2>{state.connected ? conversation ? 'Conversation ready' : 'Create a conversation' : 'Connect to AOTX'}</h2>
+          <p>{state.connected ? 'Select a model and enter a message to begin.' : 'Connect a gateway to use its available models.'}</p></div></div>
+        <div className="welcome-status"><div><span>Project</span><strong>{state.project.name}</strong></div>
+          <div><span>Gateway</span><strong>{state.connected ? 'Connected' : 'Disconnected'}</strong></div>
+          <div><span>Model</span><strong>{state.project.model || 'Not selected'}</strong></div></div>
+        <div className="steps"><button onClick={() => windows.open('project')}><b>01</b><span>Project folder<small>View storage and files</small></span></button>
+          <button onClick={() => windows.open('connection')}><b>02</b><span>{state.connected ? 'Connection details' : 'Connect gateway'}<small>Gateway address and access</small></span></button>
+          <button onClick={() => void send({ type: 'newConversation', title: `Conversation ${state.project.conversations.length + 1}` })}><b>03</b><span>New conversation<small>Start a separate history</small></span></button></div>
+        <p className="footnote">Conversation history is saved in this project. Ordinary conversations do not update CCIR memory.</p>
       </div>}
       {conversation?.turns.map(turn => <article className="turn" key={turn.id} data-turn={turn.id}>
-        <div className="message user-message"><span className="eyebrow">YOU</span><pre>{turn.prompt}</pre></div>
+        <div className="message user-message"><div className="message-head"><span className="eyebrow">YOU</span><span className="message-kind">Message</span></div><pre>{turn.prompt}</pre></div>
         <div className="message assistant-message"><div className="message-head"><span className="eyebrow">{turn.model}</span>
           <span className={`phase phase-${turn.phase}`}>{turn.phase}</span></div>
           <pre>{turn.reply || (turn.phase === 'submitting' ? 'Submitting request...' : turn.phase === 'accepted' || turn.phase === 'running' ? 'Waiting for output...' : 'No output received.')}</pre>

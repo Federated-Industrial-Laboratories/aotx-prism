@@ -13,5 +13,7 @@ Target version: 0.1.0.
 - Add native gateway discovery, text conversations, cancellation and request recovery.
 - Add silver and graphite themes and an optional request activity window.
 - Add protocol, storage, lifecycle and visible desktop checks.
+- Add an internal application frame, metal panel headers and a rendered application mark.
+- Add readable activity tiles, optional visualization and panel maximize/restore controls.
 
 No application package is published. CCIR and media workflows are not integrated yet.

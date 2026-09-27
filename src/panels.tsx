@@ -92,11 +92,19 @@ function Inspector() {
 const panels = { conversation: Conversation, connection: Connection, project: Project, models: Models, files: Files, inspector: Inspector, activity: Activity };
 export function Panel(props: IDockviewPanelProps) {
   const id = props.api.id as PanelId, Component = panels[id];
+  const [maximized, setMaximized] = useState(false);
+  const [visible, setVisible] = useState(props.api.isVisible);
+  useEffect(() => {
+    const subscription = windows.api?.onDidMaximizedGroupChange(() => setMaximized(props.api.isMaximized()));
+    const visibility = props.api.onDidVisibilityChange(event => setVisible(event.isVisible));
+    return () => { subscription?.dispose(); visibility.dispose(); };
+  }, [props.api]);
   if (!Component) return null;
   return <section className={`panel panel-${id}`} data-panel={id} aria-label={props.api.title}>
     <div className="panel-tools"><span>{id === 'conversation' ? 'SESSION WORKSPACE' : 'UTILITY WINDOW'}</span>
       <button aria-label={`Float ${id}`} onClick={() => windows.float(id)}>Float</button>
       <button aria-label={`Dock ${id}`} onClick={() => windows.dock(id)}>Dock</button>
-      <button aria-label={`Close ${id}`} onClick={() => windows.close(id)}>Close</button></div><Component />
+      <button aria-label={`${maximized ? 'Restore' : 'Maximize'} ${id}`} onClick={() => windows.maximize(id)}>{maximized ? 'Restore' : 'Maximize'}</button>
+      <button aria-label={`Close ${id}`} onClick={() => windows.close(id)}>Close</button></div>{id === 'activity' ? <Activity visible={visible} /> : <Component />}
   </section>;
 }

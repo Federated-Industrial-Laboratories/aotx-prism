@@ -34,7 +34,7 @@ export async function fixture() {
     }
     if (mode === 'expired') { res.writeHead(410).end('{}'); return; }
     const cursor = Number(url.searchParams.get('cursor') || 0), next = Math.min(bytes.length, cursor + 2);
-    res.end(JSON.stringify(status(cursor, bytes, mode === 'hold' ? cursor : next, cancelled ? 'cancelled' : mode === 'hold' ? 'running' : 'completed')));
+    res.end(JSON.stringify(status(cursor, bytes, mode === 'hold' && !cancelled ? cursor : next, cancelled ? 'cancelled' : mode === 'hold' ? 'running' : 'completed')));
   });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   return { calls, bytes, url: `http://127.0.0.1:${(server.address() as { port: number }).port}`,

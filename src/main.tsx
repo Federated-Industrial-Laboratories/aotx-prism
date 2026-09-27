@@ -2,6 +2,7 @@
 // Compose a dockable desktop workspace with local project navigation.
 import { createRoot } from 'react-dom/client';
 import { DockviewReact } from 'dockview-react';
+import { themeLight } from 'dockview';
 import { useState } from 'react';
 import { initialize, send, useStore } from './store';
 import { titles, windows, type PanelId } from './windows';
@@ -10,11 +11,15 @@ import 'dockview/dist/styles/dockview.css';
 import './style.css';
 import './panels.css';
 const components = { panel: Panel };
+const themes = { silver: themeLight, graphite: { ...themeLight, name: 'prism-graphite', colorScheme: 'dark' as const } };
 function App() {
   const { state, error, clear } = useStore(), [menu, setMenu] = useState(false);
-  return <main data-theme={state.theme}>
-    <header className="app-header"><div className="brand"><img src="/prism.svg" alt="" /><div><strong>AOTX-PRISM</strong><span>PROJECT RUNTIME INTERFACE &amp; SESSION MANAGER</span></div></div>
-      <div className="version">DESKTOP <b>{state.version}</b></div></header>
+  return <main className="app-shell" data-theme={state.theme}>
+    <div className="shell-cap" aria-hidden="true"><span /><i /><i /><i /></div>
+    <header className="app-header"><div className="brand"><img src="/prism-rendered.png" alt="" /><div><strong>AOTX-PRISM</strong><span>PROJECT RUNTIME INTERFACE &amp; SESSION MANAGER</span></div></div>
+      <div className="version"><span>LOCAL WORKSPACE</span><b>Desktop interface</b></div></header>
+    <div className="connection-strip"><span><i className={`status-dot ${state.connected ? 'online' : ''}`} />
+      {state.connected ? 'Gateway connected' : 'Gateway disconnected'}</span><span>AOTX-PRISM / {state.version}</span></div>
     <nav className="menu-bar" aria-label="Application menu">
       <button onClick={() => windows.open('project')}>Project</button><button onClick={() => windows.open('connection')}>Connection</button>
       <button onClick={() => windows.open('models')}>Models</button>
@@ -35,13 +40,14 @@ function App() {
       }}><span className="conversation-icon">#</span><span>{c.title}<small>{c.turns.length} {c.turns.length === 1 ? 'message' : 'messages'}</small></span></button>)}</div>
       <div className="sidebar-bottom"><button onClick={() => windows.open('files')}>Project files <span>Read-only</span></button>
         <div><span className={`status-dot ${state.connected ? 'online' : ''}`} />{state.connected ? 'Gateway connected' : 'Gateway offline'}</div>
-        <p>CCIR workspace integration follows the conversation workspace.</p></div></aside>
-      <div className="workspace"><DockviewReact components={components} onReady={event => windows.attach(event.api)} className="dockview-theme-light" /></div>
+        <p>Project history stays in the folder shown above.</p></div></aside>
+      <div className="workspace"><DockviewReact components={components} theme={themes[state.theme]} onReady={event => windows.attach(event.api)} className="dockview-theme-light" /></div>
     </div>
     {(error || state.notice || !state.saved) && <div className={`notice ${error || !state.saved ? 'warning' : ''}`} role={error ? 'alert' : 'status'}>
       <span>{error || state.notice}</span>{error && <button aria-label="Dismiss error" onClick={clear}>Dismiss</button>}</div>}
     <footer><span><i className={`status-dot ${state.connected ? 'online' : ''}`} />{state.busy ? 'Reading device output' : 'Ready'}</span>
       <span>{state.project.model || 'No model selected'}</span><span className={state.saved ? '' : 'warning'}>{state.saved ? 'History saved locally' : 'History save failed'}</span></footer>
+    <div className="shell-bottom" aria-hidden="true" />
   </main>;
 }
 initialize().then(() => createRoot(document.getElementById('root')!).render(<App />)).catch(error => {

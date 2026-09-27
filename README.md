@@ -1,4 +1,4 @@
-<p align="center"><img src="public/prism.svg" width="112" alt="AOTX-PRISM" /></p>
+<p align="center"><img src="public/prism-rendered.png" width="112" alt="AOTX-PRISM" /></p>
 <h1 align="center">AOTX-PRISM</h1>
 <p align="center">Project Runtime Interface and Session Manager</p>
 
@@ -20,7 +20,7 @@ version tag or application release is published.
 | Conversations | Text input, incremental output, exact cancellation and saved request handles |
 | Recovery | Read a known request again without sending its prompt again |
 | Workspace | Docked or floating panels, saved layout, silver and graphite themes |
-| Activity window | Optional request status with a decorative rain field |
+| Activity window | Readable request tiles and an optional rain field |
 
 CCIR file creation, managed runtime launch, shared memory views and media input
 are not integrated yet. The activity window does not display CCIR idle output.
@@ -56,9 +56,15 @@ Reopen a project folder to restore its conversations. A bearer token is not
 stored with the project. Connect again after an application restart.
 
 Use **Windows** to open a panel. Drag its tab to move it. Use **Float** or **Dock**
-for explicit placement, and drag a window edge or divider to resize it.
+for explicit placement. Drag a window edge or divider to resize it.
+
+**Maximize** expands a panel. **Restore** returns to its previous layout.
+
 **Reset layout** restores the conversation view. Closing a panel does not cancel
 its device request. The optional system folder picker is the only modal selector.
+
+The activity window opens with status tiles. Select **Show visualization** to open
+its rain field. See [interface structure](docs/interface.md) for themes and panels.
 
 ## Storage and request state
 
