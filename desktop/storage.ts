@@ -4,10 +4,10 @@ import { DatabaseSync } from 'node:sqlite';
 import { lstatSync, mkdirSync, realpathSync, opendirSync, openSync, closeSync,
   fstatSync, readSync, constants, chmodSync } from 'node:fs';
 import { join, basename } from 'node:path';
-import { MAX_PROJECT, project } from '../shared/validate.js';
+import { MAX_PROJECT, project, relativePath } from '../shared/validate.js';
 import type { Project, FileEntry } from '../shared/types.js';
 export function emptyProject(name: string): Project {
-  return { schema: 1, name: name.slice(0, 120) || 'Project', endpoint: '', model: '',
+  return { schema: 2, profiles: [], name: name.slice(0, 120) || 'Project', endpoint: '', model: '',
     maxTokens: 128, temperature: 0.7, conversations: [] };
 }
 export class ProjectStore {
@@ -43,8 +43,8 @@ export class ProjectStore {
       chmodSync(path, 0o600);
       this.db.exec('PRAGMA trusted_schema=OFF; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');
       const version = this.db.prepare('PRAGMA user_version').get() as { user_version: number };
-      if (version.user_version !== 0 && version.user_version !== 1) throw Error('Unsupported project database version.');
-      this.db.exec('CREATE TABLE IF NOT EXISTS project (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, data TEXT NOT NULL) STRICT; PRAGMA user_version=1;');
+      if (![0, 1, 2].includes(version.user_version)) throw Error('Unsupported project database version.');
+      this.db.exec('BEGIN; CREATE TABLE IF NOT EXISTS project (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, data TEXT NOT NULL) STRICT; CREATE TABLE IF NOT EXISTS original_project (version INTEGER PRIMARY KEY, data TEXT NOT NULL) STRICT; PRAGMA user_version=2; COMMIT;');
       this.db.prepare('INSERT OR IGNORE INTO project VALUES (1, 0, ?)').run(JSON.stringify(emptyProject(basename(this.folder))));
     } catch (error) { this.db.close(); throw error; }
   }
@@ -59,7 +59,9 @@ export class ProjectStore {
     this.checkFolder();
     const row = this.db.prepare('SELECT revision, length(CAST(data AS BLOB)) AS bytes, CASE WHEN length(CAST(data AS BLOB))<=16777216 THEN data END AS data FROM project WHERE id=1').get() as { revision: number; bytes: number; data: string } | undefined;
     if (!row || row.bytes > MAX_PROJECT) throw Error('Project data is missing or exceeds the size limit.');
-    const value = project(JSON.parse(row.data));
+    const raw = JSON.parse(row.data), old = raw.schema === 1;
+    const value = project(raw);
+    if (old) this.db.prepare('INSERT OR IGNORE INTO original_project VALUES (1, ?)').run(row.data);
     this.revision = row.revision;
     return value;
   }
@@ -72,26 +74,40 @@ export class ProjectStore {
     if (result.changes !== 1) throw Error('Another application changed this project. Reopen it before writing.');
     this.revision++;
   }
-  files(): FileEntry[] {
+  private directory(path: string) {
+    relativePath(path, true); let fd = openSync(this.anchoredFolder, constants.O_RDONLY | constants.O_DIRECTORY);
+    try {
+      for (const part of path ? path.split('/') : []) {
+        const next = openSync(`/proc/self/fd/${fd}/${part}`, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+        closeSync(fd); fd = next;
+      }
+      return fd;
+    } catch (error) { closeSync(fd); throw error; }
+  }
+  files(path = ''): FileEntry[] {
     this.checkFolder();
-    const directory = opendirSync(this.anchoredFolder), files: FileEntry[] = [];
+    const fd = this.directory(path), anchor = `/proc/self/fd/${fd}`;
+    const directory = opendirSync(anchor), files: FileEntry[] = [];
     try {
       for (let inspected = 0; inspected < 4096 && files.length < 128; inspected++) {
         const entry = directory.readSync(); if (!entry) break;
         if (entry.name.startsWith('.') || (!entry.isFile() && !entry.isDirectory())) continue;
         try {
-          const info = lstatSync(join(this.anchoredFolder, entry.name));
+          const info = lstatSync(join(anchor, entry.name));
           if (info.isFile() || info.isDirectory()) files.push({ name: entry.name,
             kind: info.isDirectory() ? 'directory' : 'file', bytes: info.size });
         } catch { /* Files can disappear while a directory is read. */ }
       }
-    } finally { directory.closeSync(); }
+    } finally { directory.closeSync(); closeSync(fd); }
     return files.sort((a, b) => a.name.localeCompare(b.name));
   }
   readFile(name: string): string {
     this.checkFolder();
-    if (!name || /[\\/\0]/.test(name) || name.startsWith('.')) throw Error('Select a project file.');
-    const fd = openSync(join(this.anchoredFolder, name), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    relativePath(name);
+    const parts = name.split('/'), leaf = parts.pop()!, directory = this.directory(parts.join('/'));
+    let fd: number;
+    try { fd = openSync(`/proc/self/fd/${directory}/${leaf}`, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK); }
+    finally { closeSync(directory); }
     try {
       const info = fstatSync(fd);
       if (!info.isFile() || info.size > 131072) throw Error('Text previews require a regular file of at most 128 KiB.');

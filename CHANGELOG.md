@@ -16,4 +16,8 @@ Target version: 0.1.0.
 - Add an internal application frame, metal panel headers and a rendered application mark.
 - Add readable activity tiles, optional visualization and panel maximize/restore controls.
 
-No application package is published. CCIR and media workflows are not integrated yet.
+- Add owned runtime supervision, installation checks and saved machine profiles.
+- Add exact-model generation profiles, nested project files, names, archive and export.
+- Add advertised JPEG/WAV uploads and explicit gateway source removal.
+
+No application package is published. CCIR workflows are not integrated yet.

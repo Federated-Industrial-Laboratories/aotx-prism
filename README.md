@@ -15,15 +15,17 @@ version tag or application release is published.
 
 | Workflow | Support |
 | --- | --- |
-| Project folders | Local conversation history and read-only text previews |
+| Project folders | Local history, names, archive, export and nested read-only previews |
+| Runtime setup | Checked local launch, GPU selection and saved machine profiles |
 | Gateway connection | Bearer authentication, model discovery and capability display |
-| Conversations | Text input, incremental output, exact cancellation and saved request handles |
+| Conversations | Text and advertised JPEG/WAV input, incremental output and exact cancellation |
+| Generation profiles | Saved settings bound to an exact model digest |
 | Recovery | Read a known request again without sending its prompt again |
 | Workspace | Docked or floating panels, saved layout, silver and graphite themes |
 | Activity window | Readable request tiles and an optional rain field |
 
-CCIR file creation, managed runtime launch, shared memory views and media input
-are not integrated yet. The activity window does not display CCIR idle output.
+CCIR file creation and shared memory views are not integrated yet.
+The activity window does not display CCIR background work.
 Model-driven file changes and command execution are outside the first release.
 
 ## Build and start
@@ -55,6 +57,9 @@ The application starts with a local workspace under its desktop data directory.
 Reopen a project folder to restore its conversations. A bearer token is not
 stored with the project. Connect again after an application restart.
 
+Use **Runtime setup** to start an installed local runtime instead of entering
+an external gateway. See [runtime and project setup](docs/setup.md) for the full flow.
+
 Use **Windows** to open a panel. Drag its tab to move it. Use **Float** or **Dock**
 for explicit placement. Drag a window edge or divider to resize it.
 
@@ -78,8 +83,9 @@ If output reading stops, reconnect to the same gateway and select **Read result*
 PRISM does not send a prompt again after an uncertain admission.
 
 **Cancel request** sends cancellation for the exact request handle. A final device
-state confirms the result. Disconnecting or exiting stops reads but does not
-cancel device work. A runtime restart can expire ordinary request handles; local
+state confirms the result. Disconnecting stops reads without canceling device work.
+Exiting PRISM stops its owned runtime and leaves external runtimes running.
+A runtime restart can expire ordinary request handles; local
 history remains available.
 
 See [connection and storage details](docs/architecture.md) for limits and boundaries.
@@ -89,6 +95,7 @@ See [connection and storage details](docs/architecture.md) for limits and bounda
 ```sh
 npm run check
 npm run test:desktop
+node --import tsx tests/setup-desktop.mjs
 git diff --check
 ```
 

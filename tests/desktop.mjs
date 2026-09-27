@@ -2,6 +2,7 @@
 // Exercise visible desktop workflows with an isolated local HTTP fixture.
 // Inputs: built app, display and optional PRISM_TEST_OUTPUT. Output: check receipt. Exit: 0 pass, 1 failure.
 import { _electron as electron } from 'playwright';
+import { waitState } from './ui.mjs';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -120,10 +121,7 @@ try {
     await page.getByRole('button', { name: 'Connection', exact: true }).click();
     await page.getByRole('button', { name: 'Maximize connection', exact: true }).click();
     await page.getByRole('button', { name: 'Close Connection', exact: true }).click();
-    await page.waitForFunction(async () => {
-      const { state } = await window.prism.command({ type: 'state' });
-      return !JSON.parse(state.layout).panels.connection;
-    });
+    await waitState(page, state => !JSON.parse(state.layout).panels.connection);
     await page.getByRole('button', { name: 'Maximize conversation', exact: true }).click();
     await page.getByRole('button', { name: 'Restore conversation', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Restore conversation', exact: true }).click();

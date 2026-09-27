@@ -44,9 +44,14 @@ export function capabilities(value: unknown): Capabilities {
   const bounded = (value: unknown, max: number) => {
     const n = number(value, 1, max); if (!Number.isInteger(n)) throw Error('Invalid gateway limit.'); return n;
   };
+  const mediaBytes = flags.private_media ? text(limits.private_media_bytes, 20) : '0';
+  if (!/^\d+$/.test(mediaBytes)) throw Error('Invalid media quota.');
+  const mediaQuota = number(Number(mediaBytes), 0, Number.MAX_SAFE_INTEGER);
+  if (!Number.isInteger(mediaQuota)) throw Error('Invalid media quota.');
   return { epoch: epoch(row.runtime_epoch), models, features: flags,
     outputTokens: bounded(limits.output_tokens, 1048576), outputBytes: bounded(limits.output_bytes, 1073741824),
-    promptBytes: bounded(limits.wrapped_prompt_bytes, 1073741824) };
+    promptBytes: bounded(limits.wrapped_prompt_bytes, 1073741824),
+    uploadBytes: flags.private_media ? Math.min(bounded(limits.upload_bytes, 1073741824), mediaQuota, 33554432) : 0 };
 }
 export function output(value: unknown, turn: Turn): Turn {
   const row = object(value), part = object(row.output);
@@ -72,16 +77,17 @@ export function output(value: unknown, turn: Turn): Turn {
 export class Gateway {
   readonly url: string;
   constructor(url: string, private readonly token: string, private readonly request: typeof fetch = fetch) { this.url = endpoint(url); }
-  async json(path: string, signal: AbortSignal, body?: unknown): Promise<{ value: unknown; handle?: string }> {
+  async json(path: string, signal: AbortSignal, body?: unknown, mime?: string, method?: string): Promise<{ value: unknown; handle?: string }> {
     let handle: string | undefined;
     try {
-      const encoded = body === undefined ? undefined : JSON.stringify(body);
-      if (encoded && Buffer.byteLength(encoded) > 2 * 1024 * 1024) throw Error('The request body exceeds the client limit.');
-      const response = await this.request(this.url + path, { method: body === undefined ? 'GET' : 'POST',
-        headers: { Authorization: `Bearer ${this.token}`, ...(encoded ? { 'Content-Type': 'application/json' } : {}) },
-        body: encoded, redirect: 'error', signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]) });
+      const encoded = body === undefined ? undefined : mime ? body as Buffer : JSON.stringify(body);
+      if (encoded && Buffer.byteLength(encoded) > (mime ? 33554432 : 2 * 1024 * 1024)) throw Error('The request body exceeds the client limit.');
+      const response = await this.request(this.url + path, { method: method || (body === undefined ? 'GET' : 'POST'),
+        headers: { Authorization: `Bearer ${this.token}`, ...(encoded ? { 'Content-Type': mime || 'application/json' } : {}) },
+        body: Buffer.isBuffer(encoded) ? new Uint8Array(encoded) : encoded, redirect: 'error', signal: AbortSignal.any([signal, AbortSignal.timeout(mime ? 300000 : 30000)]) });
       const header = response.headers.get('x-request-id');
       if (header && HANDLE.test(header)) handle = header;
+      if (response.status === 204 && method === 'DELETE') return { value: null };
       const reader = response.body?.getReader();
       if (!reader) throw Error('The gateway returned no response body.');
       const pieces: Uint8Array[] = []; let size = 0;

@@ -2,7 +2,9 @@
 // Present nonmodal project, connection, model and request panels.
 import { useEffect, useState } from 'react';
 import type { IDockviewPanelProps } from 'dockview';
-import type { FileEntry } from '../shared/types';
+import { Project, Files } from './projects';
+import { Runtime } from './runtime';
+import { MediaSources } from './sources';
 import { useStore, send } from './store';
 import { windows, type PanelId } from './windows';
 import { Conversation } from './conversation';
@@ -23,25 +25,9 @@ function Connection() {
       <p>Disconnect stops output reads. It does not cancel device work.</p></div>
   </div>;
 }
-function Project() {
-  const { state } = useStore(), [path, setPath] = useState(state.folder), [waiting, setWaiting] = useState(false);
-  async function choose() { const result = await send({ type: 'chooseFolder' }); if (result?.folder) setPath(result.folder); }
-  return <div className="form-panel"><span className="eyebrow">LOCAL STORAGE</span><h2>Project folder</h2>
-    <p>Select an existing folder. PRISM stores conversations in its private <code>.prism</code> directory.</p>
-    <label>Folder path<input aria-label="Folder path" value={path} onChange={e => setPath(e.target.value)} /></label>
-    <div className="button-row"><button onClick={() => void choose()}>Browse folders</button>
-      <button className="primary" disabled={state.connected || state.busy || waiting} onClick={async () => {
-        setWaiting(true); await send({ type: 'openProject', path }); setWaiting(false);
-      }}>Open project</button></div>
-    {state.connected && <p className="warning">Disconnect before changing project folders.</p>}
-    <dl><dt>Current folder</dt><dd>{state.folder}</dd><dt>History</dt><dd>{state.saved ? 'Saved locally' : 'Save failed'}</dd>
-      <dt>Conversations</dt><dd>{state.project.conversations.length} / 64</dd></dl>
-    <p className="footnote">Project files are read-only in this application. A folder is not sent to the model. Reopen a folder to restore its conversations.</p>
-  </div>;
-}
 function Models() {
   const { state } = useStore(), [model, setModel] = useState(state.project.model), [tokens, setTokens] = useState(state.project.maxTokens);
-  const [temperature, setTemperature] = useState(state.project.temperature);
+  const [temperature, setTemperature] = useState(state.project.temperature), [profileName, setProfileName] = useState('');
   useEffect(() => { setModel(state.project.model); setTokens(state.project.maxTokens); setTemperature(state.project.temperature); },
     [state.project.model, state.project.maxTokens, state.project.temperature]);
   const caps = state.capabilities, current = caps?.models.find(m => m.id === model);
@@ -52,26 +38,16 @@ function Models() {
       <div className="field-pair"><label>Maximum output tokens<input aria-label="Maximum output tokens" type="number" min="1" max={caps.outputTokens} value={tokens} onChange={e => setTokens(Number(e.target.value))} /></label>
         <label>Temperature<input aria-label="Temperature" type="number" min="0" max="2" step="0.1" value={temperature} onChange={e => setTemperature(Number(e.target.value))} /></label></div>
       <button className="primary" disabled={!state.connected} onClick={() => void send({ type: 'profile', model, maxTokens: tokens, temperature })}>Apply settings</button>
-      <dl><dt>Model SHA-256</dt><dd><code>{current?.sha256}</code></dd><dt>Model inputs</dt><dd>{current?.input.join(', ')}</dd>
+      <h3>Generation profiles</h3><label>Profile name<input aria-label="Generation profile name" value={profileName} onChange={e => setProfileName(e.target.value)} /></label>
+      <button disabled={!profileName} onClick={() => void send({ type: 'saveProfile', name: profileName })}>Save current settings</button>
+      {state.project.profiles.map(p => <div className="button-row" key={p.name}><span>{p.name}</span><button onClick={() => void send({ type: 'applyProfile', name: p.name })}>Apply {p.name}</button>
+        <button onClick={() => void send({ type: 'removeProfile', name: p.name })}>Remove {p.name}</button></div>)}
+      <dl><dt>Prompt limit</dt><dd>{caps.promptBytes.toLocaleString()} bytes</dd><dt>Output limit</dt><dd>{caps.outputTokens.toLocaleString()} tokens</dd><dt>Model SHA-256</dt><dd><code>{current?.sha256}</code></dd><dt>Model inputs</dt><dd>{current?.input.join(', ')}</dd>
         <dt>Runtime epoch</dt><dd>{caps.epoch}</dd><dt>Automatic memory capability</dt><dd>{current?.automatic_memory ? 'Available for this model' : 'Unavailable for this model'}</dd></dl>
-      <p className="footnote">This conversation view sends text only. Memory and controls require a separate CCIR connection.</p>
+      <p className="footnote">Attachments require a matching model input and media permission. Memory and controls require a separate CCIR connection.</p>
       <h3>Gateway features</h3><div className="capabilities">{Object.entries(caps.features).map(([key, value]) =>
         <div key={key}><span>{key.replaceAll('_', ' ')}</span><span className={value ? 'available' : 'muted'}>{value ? 'Available' : 'Unavailable'}</span></div>)}</div>
     </>}
-  </div>;
-}
-function Files() {
-  const { state } = useStore(), [files, setFiles] = useState<FileEntry[]>([]), [name, setName] = useState(''), [content, setContent] = useState('');
-  async function refresh() { const reply = await send({ type: 'files' }); if (reply?.files) setFiles(reply.files); }
-  useEffect(() => { setName(''); setContent(''); void refresh(); }, [state.folder]);
-  return <div className="form-panel"><div className="split-heading"><div><span className="eyebrow">READ-ONLY</span><h2>Project files</h2></div>
-    <button onClick={() => void refresh()}>Refresh</button></div><p className="path">{state.folder}</p>
-    <div className="file-list">{files.map(file => <button key={file.name} disabled={file.kind === 'directory'} onClick={async () => {
-      const reply = await send({ type: 'readFile', name: file.name }); if (reply?.text !== undefined) { setName(file.name); setContent(reply.text); }
-    }}><span>{file.kind === 'directory' ? 'DIR' : 'TXT'}</span><strong>{file.name}</strong><small>{file.bytes.toLocaleString()} B</small></button>)}</div>
-    {!files.length && <p className="muted">No visible files in this folder.</p>}
-    <p className="footnote">Up to 128 entries. Text previews support UTF-8 files up to 128 KiB. Hidden files and links are excluded.</p>
-    {name && <><h3>{name}</h3><pre className="file-preview">{content || '(Empty file)'}</pre></>}
   </div>;
 }
 function Inspector() {
@@ -89,7 +65,7 @@ function Inspector() {
     </>}
   </div>;
 }
-const panels = { conversation: Conversation, connection: Connection, project: Project, models: Models, files: Files, inspector: Inspector, activity: Activity };
+const panels = { conversation: Conversation, connection: Connection, project: Project, models: Models, files: Files, runtime: Runtime, sources: MediaSources, inspector: Inspector, activity: Activity };
 export function Panel(props: IDockviewPanelProps) {
   const id = props.api.id as PanelId, Component = panels[id];
   const [maximized, setMaximized] = useState(false);
