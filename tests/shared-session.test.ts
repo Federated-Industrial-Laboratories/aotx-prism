@@ -47,29 +47,34 @@ for (const count of [1, 64]) test(`persist and recover ${count} distinct shared 
     } finally { await c.close(); }
   }
 });
-test('shared status separates device completion from durable completion', async () => {
-  const c = context(); try {
+for (const count of [1, 64]) test(`shared status separates device completion from durable completion: ${count} distinct cases`, async () => {
+  for (let index = 0; index < count; index++) {
+  const c = context(index); try {
     await c.open(); c.fixture.saved = false;
     await c.session.execute({ type: 'sharedSave' }, c.project); await delay(30);
     assert.equal(receipt(c.journal.data.records[0].result, c.fixture.lineage).saved_terminal, false);
     assert.equal(c.session.state.watching.length, 1); c.fixture.saved = true; await settled(c.session);
     assert.equal(receipt(c.journal.data.records[0].result, c.fixture.lineage).saved_terminal, true);
   } finally { await c.close(); }
+  }
 });
-test('shared status 200 publishes the saved resource label and refreshes participant state', async () => {
-  const c = context(); try {
+for (const count of [1, 64]) test(`shared status 200 publishes the saved resource label and refreshes participant state: ${count} distinct cases`, async () => {
+  for (let index = 0; index < count; index++) {
+  const c = context(index); try {
     await c.open();
-    await c.session.execute({ type: 'sharedSpace', scope: 'private', name: 'Named space' }, c.project);
+    await c.session.execute({ type: 'sharedSpace', scope: 'private', name: `Named space ${index}` }, c.project);
     await settled(c.session);
     const row = c.journal.data.records[0], result = receipt(row.result, c.fixture.lineage);
     assert.equal(result.status, 200);
-    assert.equal(c.journal.data.labels[`spc-${c.fixture.lineage}-${result.resource}`], 'Named space');
+    assert.equal(c.journal.data.labels[`spc-${c.fixture.lineage}-${result.resource}`], `Named space ${index}`);
     assert.equal(c.session.state.person?.save.pending_bytes, '0');
     assert.equal(c.session.state.person?.next_sequence, '2');
   } finally { await c.close(); }
+  }
 });
-test('restored endpoints require explicit matching lineage and actor before retry', async () => {
-  const c = context(); try {
+for (const count of [1, 64]) test(`restored endpoints require explicit matching lineage and actor before retry: ${count} distinct cases`, async () => {
+  for (let index = 0; index < count; index++) {
+  const c = context(index); try {
     await c.open(); c.fixture.lose = true;
     await assert.rejects(c.session.execute({ type: 'sharedSave' }, c.project)); const row = c.journal.data.records[0];
     await c.session.connect(c.fixture.gateway('http://127.0.0.1:8081'));
@@ -81,26 +86,30 @@ test('restored endpoints require explicit matching lineage and actor before retr
     await c.session.execute({ type: 'sharedRetry', key: row.key }, c.project); await settled(c.session);
     assert.equal(c.fixture.posts[0], c.fixture.posts[1]);
   } finally { await c.close(); }
+  }
 });
-test('wrong receipts, revoked access, saturation and event gaps stay explicit', async () => {
+for (const count of [1, 64]) test(`wrong receipts, revoked access, saturation and event gaps stay explicit: ${count} distinct cases`, async () => {
+  for (let index = 0; index < count; index++) {
   for (const status of [403, 409, 410, 429, 503]) {
-    const c = context(status); try {
+    const c = context(index * 1000 + status); try {
       await c.open(); c.fixture.status = status;
       await assert.rejects(c.session.execute({ type: 'sharedSave' }, c.project));
       assert.equal(c.journal.data.records[0].refusal, status); assert.equal(c.journal.data.records[0].result, undefined);
       assert.equal(c.fixture.posts.length, 1);
     } finally { await c.close(); }
   }
-  const c = context(); try {
+  const c = context(index); try {
     await c.open(); c.fixture.wrongActor = true;
     await assert.rejects(c.session.execute({ type: 'sharedSave' }, c.project), /does not match/);
     assert.equal(c.journal.data.records[0].result, undefined);
     c.fixture.gap = true; await c.session.list('events', '0');
     assert.equal(c.session.state.events.gap, true); assert.equal(c.session.state.events.floor, '20');
   } finally { await c.close(); }
+  }
 });
-test('cancellation retains the exact target sequence and membership retains explicit rights', async () => {
-  const c = context(); try {
+for (const count of [1, 64]) test(`cancellation retains the exact target sequence and membership retains explicit rights: ${count} distinct cases`, async () => {
+  for (let index = 0; index < count; index++) {
+  const c = context(index); try {
     await c.open(); c.fixture.saved = false;
     await c.session.execute({ type: 'sharedSend', text: 'Cancelable input' }, c.project, c.caps);
     const input = c.journal.data.records[0];
@@ -109,11 +118,13 @@ test('cancellation retains the exact target sequence and membership retains expl
     assert.equal(cancel.path, `/aotx/v1/shared/operations/${input.handle}/cancel`);
     assert.equal(JSON.parse(cancel.body).target_sequence, input.sequence);
     assert.notEqual(cancel.sequence, input.sequence); c.fixture.saved = true; await settled(c.session);
-    await c.session.execute({ type: 'sharedMember', participant: identity(999), permissions: [] }, c.project); await settled(c.session);
+    const permissions = [[], ['read'], ['read', 'write'], ['read', 'write', 'manage']][index % 4];
+    await c.session.execute({ type: 'sharedMember', participant: identity(999 + index), permissions: permissions }, c.project); await settled(c.session);
     const member = c.journal.data.records.at(-1)!;
     assert.equal(member.path, `/aotx/v1/shared/spaces/${c.fixture.space}/members`);
-    assert.deepEqual(JSON.parse(member.body).permissions, []);
+    assert.deepEqual(JSON.parse(member.body).permissions, permissions);
   } finally { await c.close(); }
+  }
 });
 test('failed journal writes prevent transmission and concurrent writers cannot overwrite', async () => {
   const journal = new MutationJournal(emptyJournal(), () => { throw Error('Disk full'); });

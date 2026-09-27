@@ -72,6 +72,18 @@ try {
     assert.equal(after.shared.records[1].key, before.shared.records[1].key);
     assert.equal(fixture.posts[1], fixture.posts[2]); assert.equal(fixture.sequence, 3);
   });
+  await check('saved result read reports expiration and retains local output', async () => {
+    const original = fixture.value.bind(fixture); let reads = 0;
+    fixture.value = async (path, body) => {
+      if (!body && path.includes('/operations/')) { reads++; return { status: 410, value: {} }; }
+      return original(path, body);
+    };
+    await page.getByRole('button', { name: 'Read result', exact: true }).first().click();
+    const state = await waitState(page, s => s.shared.error.includes('410') && !s.shared.watching.length);
+    assert.equal(reads, 1); assert.equal(state.shared.records[0].result.output.text, 'Reply 42: \u20ac');
+    await page.getByText('Shared gateway HTTP 410. The saved request is retained.', { exact: true }).waitFor();
+    fixture.value = original;
+  });
   await check('graphite, minimum size and floating shared headers remain readable', async () => {
     await page.getByLabel('Theme', { exact: true }).selectOption('graphite');
     await page.getByRole('button', { name: 'Float shared', exact: true }).click();

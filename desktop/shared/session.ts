@@ -12,6 +12,7 @@ export class SharedSession {
   state: SharedState = emptyShared();
   private gateway?: Gateway; private abort = new AbortController();
   private tasks = new Map<string, Promise<void>>();
+  private pageReads = new Map<string, number>();
   constructor(readonly journal: MutationJournal, private changed: (state: SharedState) => void) { this.sync(); }
   private sync() { this.state.records = structuredClone(this.journal.data.records); this.state.labels = { ...this.journal.data.labels }; }
   private emit() { this.sync(); this.changed(structuredClone(this.state)); }
@@ -53,14 +54,19 @@ export class SharedSession {
   }
   async list(kind: 'spaces' | 'members' | 'conversations' | 'events', cursor: string) {
     const { person } = this.ready();
+    const space = this.state.selectedSpace, conversation = this.state.selectedConversation, signal = this.abort.signal;
+    const ticket = (this.pageReads.get(kind) || 0) + 1; this.pageReads.set(kind, ticket);
+    const current = () => !signal.aborted && this.pageReads.get(kind) === ticket &&
+      (kind === 'spaces' || (space === this.state.selectedSpace && (kind !== 'events' || conversation === this.state.selectedConversation)));
     const path = kind === 'spaces' ? '/spaces' : kind === 'events' ? `/conversations/${handle(this.state.selectedConversation, 'con', person.lineage)}/events` :
       `/spaces/${handle(this.state.selectedSpace, 'spc', person.lineage)}/${kind}`;
     try {
       const raw = await this.get(`${path}?cursor=${cursor}&limit=64`), r = resource(raw, person.lineage);
-      if (kind !== 'spaces' && r.space !== this.state.selectedSpace) throw Error('The shared page belongs to another space.');
+      if (!current()) return;
+      if (kind !== 'spaces' && r.space !== space) throw Error('The shared page belongs to another space.');
       this.state[kind] = page(raw, kind, person.lineage);
     }
-    catch (error) { this.state[kind] = emptyPage(); this.state.inspected = undefined; this.emit(); throw error; }
+    catch (error) { if (!current()) return; this.state[kind] = emptyPage(); this.state.inspected = undefined; this.emit(); throw error; }
     this.emit();
   }
   private async prepare(path: string, fields: Row, label: string) {
@@ -122,7 +128,9 @@ export class SharedSession {
     const output = this.output(row);
     while (!this.abort.signal.aborted) {
       row = this.row(key);
-      const current = row.result ? this.validateResult(row.result, row) : undefined;
+      const raw = await this.get(`/operations/${handle(row.handle, 'op', row.lineage)}?offset=${output.cursor}`);
+      const current = this.retain(raw, row, output);
+      if (current.save.error) throw Error('The runtime reports a persistent save error.');
       if (current && terminal(current) && current.saved_terminal && output.complete) {
         if (current.status === 200 && current.device_committed) {
           if (current.operation === 2 || current.operation === 4) this.write(() => this.journal.label(`${current.operation === 2 ? 'spc' : 'con'}-${row.lineage}-${current.resource}`, row.label));
@@ -133,9 +141,6 @@ export class SharedSession {
         }
         return;
       }
-      const raw = await this.get(`/operations/${handle(row.handle, 'op', row.lineage)}?offset=${output.cursor}`);
-      const r = this.retain(raw, row, output);
-      if (r.save.error) throw Error('The runtime reports a persistent save error.');
       await delay(250, undefined, { signal: this.abort.signal });
     }
   }

@@ -32,13 +32,14 @@ for (const count of [1, 64]) test(`inspect ${count} distinct complete files with
     await assert.rejects(inspectCcir('/build', invalid, async () => detail.replace('offset 128', 'offset 99999999')), /bounds/);
   } finally { rmSync(root, { recursive: true }); }
 });
-test('create and copy use fixed commands, an explicit GPU and a new destination', async () => {
+for (const count of [1, 64]) test(`create and copy use fixed commands, an explicit GPU and a new destination: ${count} distinct cases`, async () => {
+  for (let index = 0; index < count; index++) {
   const root = mkdtempSync(join(tmpdir(), 'prism-ccir-files-'));
   for (const name of ['build', 'models', 'modules', 'gateway', 'runs']) mkdirSync(join(root, name));
   for (const name of ['aotx_boot', 'aotx_feed', 'aotx_drain', 'aotx_service', 'aotx_models']) writeFileSync(join(root, 'build', name), '', { mode: 0o700 });
-  writeFileSync(join(root, 'python'), '', { mode: 0o700 }); writeFileSync(join(root, 'models', 'weight.gguf'), 'fixture');
-  const profile: RuntimeProfile = { name: 'Files', build: join(root, 'build'), models: join(root, 'models'), modules: join(root, 'modules'),
-    gateway: join(root, 'gateway'), python: join(root, 'python'), folder: join(root, 'runs'), gpu: 'GPU-11111111-2222-3333-4444-555555555555', role: 'language' };
+  writeFileSync(join(root, 'python'), '', { mode: 0o700 }); writeFileSync(join(root, 'models', 'weight.gguf'), `fixture ${index}`);
+  const profile: RuntimeProfile = { name: `Files ${index}`, build: join(root, 'build'), models: join(root, 'models'), modules: join(root, 'modules'),
+    gateway: join(root, 'gateway'), python: join(root, 'python'), folder: join(root, 'runs'), gpu: `GPU-11111111-2222-3333-4444-${identity(index + 1).slice(-12)}`, role: 'language' };
   const calls: { command: string; args: string[]; gpu?: string }[] = [];
   const manager = new CcirManager(() => {}, async (command, args, _cwd, _timeout, _signal, gpu) => {
     calls.push({ command, args, gpu });
@@ -50,8 +51,8 @@ test('create and copy use fixed commands, an explicit GPU and a new destination'
       const bytes = readFileSync(join(args[0], '..', 'empty.bin')); assert.equal(bytes.length, 128); assert.equal(bytes.subarray(0, 8).toString(), 'AOTXOBJ1');
       assert.equal(bytes.readBigUInt64LE(80), 128n); assert.equal(bytes.readUInt32LE(88), 1);
     }
-    if (command.endsWith('aotx_ccir_pack')) file(args[args.indexOf('--output') + 1]);
-    if (args[0] === 'compact') file(args[2]);
+    if (command.endsWith('aotx_ccir_pack')) file(args[args.indexOf('--output') + 1], index + 1);
+    if (args[0] === 'compact') file(args[2], index + 1);
     return 'Checked';
   });
   const plan = { profile, output: join(root, 'created.aotxccir'), phrases: '', settings: '' };
@@ -76,22 +77,24 @@ test('create and copy use fixed commands, an explicit GPU and a new destination'
     assert.throws(() => catalog.participant('Duplicate', identity(123)), /distinct/);
     assert.deepEqual(new Catalog(directory).value.participants, catalog.value.participants);
   } finally { await manager.cancel(); rmSync(root, { recursive: true }); }
+  }
 });
-test('owned shutdown records its request before transport and requires saved terminal state', async t => {
+for (const count of [1, 64]) test(`owned shutdown records its request before transport and requires saved terminal state: ${count} distinct cases`, async t => {
+  for (let index = 0; index < count; index++) {
   const root = mkdtempSync(join(tmpdir(), 'prism-ccir-save-'));
-  const lineage = identity(1), actor = identity(2), id = `op-${lineage}-${identity(3)}`;
+  const lineage = identity(index * 10 + 1), actor = identity(index * 10 + 2), id = `op-${lineage}-${identity(index * 10 + 3)}`;
   const save = { source: '10', generation: '2', incarnation: identity(4), boot: '1', commit_sha256: identity(5, 64), pending_bytes: '0', error: 0 };
   const base = { schema: 'aotx.shared.resource.v1', lineage, save }; let body: any, reads = 0, saved = false;
   t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => {
     let value: unknown;
-    if (url.endsWith('/participant')) value = { ...base, participant: actor, registered: true, next_sequence: '9', retry_floor: '1' };
+    if (url.endsWith('/participant')) value = { ...base, participant: actor, registered: true, next_sequence: String(index + 9), retry_floor: '1' };
     else {
       if (init.body) {
         const canonical = Buffer.from(init.body as Uint8Array).toString(); body = JSON.parse(canonical);
         const journal = JSON.parse(readFileSync(join(root, 'shutdown-requests.json'), 'utf8'));
         assert.equal(journal[0].body, canonical); assert.equal(journal[0].path, '/save');
       } else { reads++; saved = true; }
-      value = { ...base, id, actor, operation_key: body.operation_key, sequence: '9', next_sequence: '10', operation: 9, resource: identity(0),
+      value = { ...base, id, actor, operation_key: body.operation_key, sequence: String(index + 9), next_sequence: String(index + 10), operation: 9, resource: identity(0),
         state: 'completed', status: 200, accepted: true, device_committed: true, saved_admission: true, saved_terminal: saved, gap: false,
         admission_source: '8', terminal_source: '10', input_order: '0', offset: '0', next_offset: '0', output_bytes: '0',
         output: { base64: '', bytes: '0' }, usage: { input_tokens: 0, output_tokens: 0 }, finish: 0 };
@@ -101,6 +104,7 @@ test('owned shutdown records its request before transport and requires saved ter
   try {
     const result = await saveOwned('http://127.0.0.1:8080', 'fixture', actor, root, AbortSignal.timeout(2000));
     assert.equal(reads, 1); assert.equal(result.saved_terminal, true);
-    await assert.rejects(saveOwned('http://127.0.0.1:8080', 'fixture', identity(99), root, AbortSignal.timeout(2000)), /participant changed/);
-  } finally { rmSync(root, { recursive: true }); }
+    await assert.rejects(saveOwned('http://127.0.0.1:8080', 'fixture', identity(99999), root, AbortSignal.timeout(2000)), /participant changed/);
+  } finally { t.mock.restoreAll(); rmSync(root, { recursive: true }); }
+  }
 });
