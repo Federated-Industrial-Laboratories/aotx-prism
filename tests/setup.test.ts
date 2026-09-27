@@ -73,7 +73,7 @@ test('media sends exact handles, drains output, survives history and exposes int
     await client.uploadFile(jpg); const media = structuredClone(client.state.attachments[0]);
     await client.run({ type: 'send', id: client.state.selected, text: 'Read this image.' }); await idle(client);
     const request = server.calls.find(c => c.path.endsWith('/requests'))!.body as any;
-    assert.deepEqual(request.messages[0].content[1], { type: 'media', media_id: media.id, modality: 'image' });
+    assert.deepEqual(request.messages[1].content[1], { type: 'media', media_id: media.id, modality: 'image' });
     assert.deepEqual(client.state.project.conversations[0].turns[0].media, [media]);
     server.mode('lost'); await assert.rejects(client.uploadFile(jpg));
     const uploads = server.calls.filter(c => c.method === 'POST' && c.path.endsWith('/media'));

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Route shared operations through a durable local journal and verify each returned identity.
+import { systemPrompt } from '../../shared/conversation.js';
+import { object } from '../../shared/validate.js';
 import { setTimeout as delay } from 'node:timers/promises';
 import { affect } from '../observation.js';
 import { selection, type ControlChoice } from '../../shared/controls.js';
@@ -34,12 +36,14 @@ export class SharedSession {
     if (caps.persistence !== 'complete_runtime') throw Error('This gateway requires a complete shared runtime.');
     const person = participant((await gateway.json(PREFIX + '/participant', this.abort.signal)).value);
     if (person.lineage !== caps.lineage || /^0+$/.test(person.participant) || person.next_sequence === '0') throw Error('Invalid shared participant.');
-    this.gateway = gateway; this.state = { ...emptyShared(), person, connected: true, saved: this.state.saved };
+    const promptBytes = caps.features !== undefined && object(caps.features).conversation_prompt === true ? object(caps.limits).system_prompt_bytes : 0;
+    if (promptBytes !== 0 && promptBytes !== 2048) throw Error('Unsupported shared prompt capacity.');
+    this.gateway = gateway; this.state = { ...emptyShared(), promptBytes, person, connected: true, saved: this.state.saved };
     this.emit(); if (person.registered) await this.list('spaces', '0');
   }
   async disconnect() {
     this.abort.abort(); await Promise.allSettled(this.tasks.values()); this.tasks.clear();
-    this.gateway = undefined; this.state.connected = false; this.state.watching = []; this.state.inspected = undefined; this.emit();
+    this.gateway = undefined; this.state.connected = false; this.state.watching = []; this.state.inspected = undefined; this.state.prompt = undefined; this.state.promptError = ''; this.state.promptBytes = 0; this.emit();
   }
   private async identity() {
     const { person } = this.ready(), next = participant(await this.get('/participant'));
@@ -146,6 +150,22 @@ export class SharedSession {
       await delay(250, undefined, { signal: this.abort.signal });
     }
   }
+  async readPrompt() {
+    this.state.prompt = undefined; this.state.promptError = ''; this.emit();
+    if (!this.state.promptBytes || !this.state.selectedConversation) return;
+    const { person } = this.ready(), id = this.state.selectedConversation, space = this.state.selectedSpace;
+    try {
+      const r = resource(await this.get(`/conversations/${handle(id, 'con', person.lineage)}/prompt`), person.lineage);
+      if (r.id !== id || r.space !== space) throw Error('The prompt belongs to another conversation.');
+      const p = object(r.prompt);
+      if (p.schema !== 'aotx.conversation.prompt.v1' || p.mutable !== false || !['explicit', 'runtime'].includes(String(p.mode))) throw Error('Invalid conversation prompt.');
+      if (p.mode === 'runtime') { if (p.system_prompt !== null || p.bytes !== 0) throw Error('Invalid inherited prompt.'); }
+      else if (new TextEncoder().encode(systemPrompt(p.system_prompt, this.state.promptBytes)).length !== p.bytes) throw Error('Invalid prompt byte count.');
+      if (id === this.state.selectedConversation && space === this.state.selectedSpace)
+        this.state.prompt = { mode: p.mode as 'explicit' | 'runtime', text: p.system_prompt as string | null };
+    } catch (error) { this.state.promptError = error instanceof Error ? error.message : 'Prompt is unavailable.'; }
+    this.emit();
+  }
   async inspect(id: string) {
     const { person } = this.ready(); handle(id, 'op', person.lineage); this.state.inspected = undefined; this.emit();
     const output = new OutputWindow(); let last: Receipt;
@@ -161,10 +181,11 @@ export class SharedSession {
   async execute(cmd: SharedCommand, project: Project, caps?: Capabilities, attachments: Media[] = [], control?: ControlChoice) {
     this.state.error = '';
     switch (cmd.type) {
+      case 'sharedPromptRead': await this.readPrompt(); break;
       case 'sharedConnect': throw Error('Use the current gateway connection.');
       case 'sharedPage': await this.list(cmd.kind, cmd.cursor); break;
       case 'sharedSelect': {
-        const { person } = this.ready();
+        const { person } = this.ready(); this.state.prompt = undefined; this.state.promptError = '';
         if (cmd.kind === 'space') {
           const r = resource(await this.get(`/spaces/${handle(cmd.id, 'spc', person.lineage)}`), person.lineage);
           if (r.id !== cmd.id) throw Error('The selected space changed.');
@@ -173,13 +194,16 @@ export class SharedSession {
         } else {
           const r = resource(await this.get(`/conversations/${handle(cmd.id, 'con', person.lineage)}`), person.lineage);
           if (r.id !== cmd.id || r.space !== this.state.selectedSpace) throw Error('The conversation belongs to another space.');
-          this.state.selectedConversation = cmd.id; await this.list('events', '0');
+          this.state.selectedConversation = cmd.id; await this.list('events', '0'); await this.readPrompt();
         }
         this.state.inspected = undefined; break;
       }
       case 'sharedRegister': await this.prepare('/participant', {}, 'Register participant'); break;
       case 'sharedSpace': await this.prepare('/spaces', { scope: cmd.scope }, cmd.name); break;
-      case 'sharedConversation': await this.prepare(`/spaces/${handle(this.state.selectedSpace, 'spc')}/conversations`, {}, cmd.name); break;
+      case 'sharedConversation':
+        if (cmd.systemPrompt !== undefined && !this.state.promptBytes) throw Error('This runtime does not support conversation prompts.');
+        await this.prepare(`/spaces/${handle(this.state.selectedSpace, 'spc')}/conversations`,
+          cmd.systemPrompt === undefined ? {} : { system_prompt: systemPrompt(cmd.systemPrompt, this.state.promptBytes) }, cmd.name); break;
       case 'sharedMember': await this.prepare(`/spaces/${handle(this.state.selectedSpace, 'spc')}/members`, { participant: cmd.participant, permissions: cmd.permissions }, 'Change membership'); await this.list('members', '0'); break;
       case 'sharedSend': {
         const { gateway } = this.ready(), model = caps?.models.find(m => m.id === project.model);

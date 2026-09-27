@@ -20,6 +20,7 @@ export function Conversation() {
     <div className="conversation-heading"><div><span className="eyebrow">ORDINARY CONVERSATION</span>
       <h1>{conversation?.title || 'Conversation workspace'}</h1></div>
       <button className="subtle" onClick={() => windows.open('models')}>{state.project.model || 'Select model'}</button></div>
+    {conversation && <details className="conversation-prompt"><summary>Conversation instructions</summary><p>{conversation.systemPrompt || 'No system prompt was supplied by this client.'}</p></details>}
     <div className="messages" aria-label="Conversation messages" aria-live="polite" aria-relevant="additions">
       {!conversation?.turns.length && <div className="welcome">
         <div className="welcome-heading"><img src="/prism-rendered.png" alt="" /><div><p className="eyebrow">PROJECT / CONVERSATION</p>
@@ -30,7 +31,7 @@ export function Conversation() {
           <div><span>Model</span><strong>{state.project.model || 'Not selected'}</strong></div></div>
         <div className="steps"><button onClick={() => windows.open('project')}><b>01</b><span>Project folder<small>View storage and files</small></span></button>
           <button onClick={() => windows.open('connection')}><b>02</b><span>{state.connected ? 'Connection details' : 'Connect gateway'}<small>Gateway address and access</small></span></button>
-          <button onClick={() => void send({ type: 'newConversation', title: `Conversation ${state.project.conversations.length + 1}` })}><b>03</b><span>New conversation<small>Start a separate history</small></span></button></div>
+          <button onClick={() => windows.setup('ordinary')}><b>03</b><span>New conversation<small>Start a separate history</small></span></button></div>
         <p className="footnote">Conversation history is saved in this project. Ordinary conversations do not update CCIR memory.</p>
       </div>}
       {conversation?.turns.map(turn => <article className="turn" key={turn.id} data-turn={turn.id}>

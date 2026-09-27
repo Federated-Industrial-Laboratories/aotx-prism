@@ -35,6 +35,7 @@ try {
   await page.getByRole('button', { name: 'Apply Careful', exact: true }).click(); assert.equal(await page.getByLabel('Maximum output tokens', { exact: true }).inputValue(), '71');
   await page.getByRole('button', { name: 'Close models', exact: true }).click(); checks.push('Saved generation profile applies its settings');
   await page.getByRole('button', { name: '+ New conversation', exact: true }).click();
+    await page.getByRole('button', { name: 'Create conversation', exact: true }).click();
   await app.evaluate(({ dialog }, file) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] }); }, jpg);
   await page.getByRole('button', { name: 'Attach media', exact: true }).click(); await page.getByRole('button', { name: 'Remove attachment sample.jpg', exact: true }).waitFor();
   await page.getByLabel('Message', { exact: true }).fill('Read the attached source.'); await page.getByRole('button', { name: 'Send message', exact: true }).click();

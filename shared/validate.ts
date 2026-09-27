@@ -5,6 +5,8 @@ import { setupCommand } from './setup.js';
 import { sharedCommand } from './shared.js';
 import { evidenceCommand } from './evidence.js';
 import { choice } from './controls.js';
+import { affectCommand } from './affect.js';
+import { systemPrompt } from './conversation.js';
 import { ccirCommand } from './ccir.js';
 export const MAX_PROJECT = 16 * 1024 * 1024;
 export const MAX_OUTPUT = 1024 * 1024;
@@ -56,6 +58,7 @@ export function project(value: unknown): Project {
     const conversation = object(raw), id = text(conversation.id, 36);
     if (!ID.test(id) || ids.has(id)) throw Error('Invalid conversation identity.');
     ids.add(id); text(conversation.title, 120);
+    if (conversation.systemPrompt !== undefined) systemPrompt(conversation.systemPrompt);
     if (conversation.archived !== undefined && typeof conversation.archived !== 'boolean') throw Error('Invalid archive state.');
     if (!Array.isArray(conversation.turns) || conversation.turns.length > 128) throw Error('Invalid conversation length.');
     for (const item of conversation.turns) { validateTurn(item);
@@ -100,6 +103,7 @@ export function terminal(turn: Turn): boolean {
 }
 export function command(value: unknown): Command {
   const row = object(value), type = text(row.type, 24);
+  const affect = affectCommand(row); if (affect) return affect;
   const setup = setupCommand(row); if (setup) return setup;
   const shared = sharedCommand(row); if (shared) return shared;
   const ccir = ccirCommand(row); if (ccir) return ccir;
@@ -110,7 +114,7 @@ export function command(value: unknown): Command {
     case 'removeAttachment': case 'deleteMedia': if (!/^media-[a-f0-9]{32}$/.test(text(row.id, 38))) throw Error('Invalid media handle.'); break;
     case 'openProject': text(row.path, 4096); break;
     case 'connect': endpoint(row.url); if (!/^[^\s\x00-\x1f\x7f]{32,256}$/.test(text(row.token, 256))) throw Error('Enter a valid bearer token.'); break;
-    case 'newConversation': text(row.title, 120); break;
+    case 'newConversation': text(row.title, 120); if (row.systemPrompt !== undefined) systemPrompt(row.systemPrompt); break;
     case 'select': case 'cancel': case 'resume': text(row.id, 36); break;
     case 'send': text(row.id, 36); text(row.text, 65536); break;
     case 'profile': text(row.model, 256); number(row.maxTokens, 1, 1048576); number(row.temperature, 0, 2);

@@ -17,6 +17,8 @@ are available. No version tag or application release is published.
 | Workflow | Support |
 | --- | --- |
 | Project folders | Local history, names, archive, export and nested read-only previews |
+| Conversation setup | Neutral or custom instructions for each new conversation |
+| Affect | Qualified model controls and permitted runtime settings |
 | Runtime setup | Checked local launch, GPU selection and saved machine profiles |
 | Gateway connection | Bearer authentication, model discovery and capability display |
 | Conversations | Text and advertised JPEG/WAV input, incremental output and exact cancellation |

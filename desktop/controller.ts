@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Own project transactions and request lifecycles independently of open panels.
+import { AffectSettingsClient } from './affect.js';
+import { DEFAULT_PROMPT } from '../shared/conversation.js';
 import { Observation } from './observation.js';
 import { emptyEvidence } from '../shared/evidence.js';
 import { selection } from '../shared/controls.js';
@@ -30,6 +32,7 @@ export class Controller {
   private shared: SharedSession;
   private ccir = new CcirManager(ccir => { this.state.ccir = ccir; this.publish(); });
   private observation = new Observation(evidence => { this.state.evidence = evidence; this.publish(); });
+  private affect = new AffectSettingsClient(affect => { this.state.affect = affect; this.publish(); });
   state: State;
   constructor(folder: string, private readonly emit: (state: State) => void,
     private readonly makeGateway = (url: string, token: string) => new Gateway(url, token),
@@ -47,7 +50,7 @@ export class Controller {
       this.state.runtime = runtime; this.publish();
       if (runtime.phase === 'failed' && this.state.connected && this.state.project.endpoint === runtime.url) void this.run({ type: 'disconnect' });
     });
-    this.state = { evidence: emptyEvidence(), ccir: structuredClone(this.ccir.state), shared: structuredClone(this.shared.state), catalog: structuredClone(catalog.value), runtime: structuredClone(this.runtime.state), attachments: [], uploading: false, version: 'development', project, folder: this.store.folder, selected: project.conversations[0]?.id || '',
+    this.state = { affect: structuredClone(this.affect.state), evidence: emptyEvidence(), ccir: structuredClone(this.ccir.state), shared: structuredClone(this.shared.state), catalog: structuredClone(catalog.value), runtime: structuredClone(this.runtime.state), attachments: [], uploading: false, version: 'development', project, folder: this.store.folder, selected: project.conversations[0]?.id || '',
       connected: false, busy: false, notice: '', saved: true, layout: null, theme: 'silver' };
   }
   private publish(): void { this.emit(structuredClone(this.state)); }
@@ -115,6 +118,8 @@ export class Controller {
       this.publish(); return { state: structuredClone(this.state) };
     }
     switch (cmd.type) {
+      case 'affectRead': await this.affect.read(this.connected(), this.state.capabilities!.epoch, this.abort.signal); break;
+      case 'affectSet': await this.affect.set(this.connected(), cmd, this.abort.signal); break;
       case 'evidenceList': await this.observation.memory(this.connected(), this.shared.state, this.abort.signal, undefined, undefined, cmd.cursor); break;
       case 'evidenceRead': await this.observation.memory(this.connected(), this.shared.state, this.abort.signal, cmd.id, cmd.version); break;
       case 'activityRead': case 'activityPage':
@@ -192,14 +197,14 @@ export class Controller {
             project.model = caps.models.find(m => m.input.includes('text'))!.id;
           project.maxTokens = Math.min(project.maxTokens, caps.outputTokens);
         });
-        this.observation.clear(); this.state.control = undefined;
+        this.observation.clear(); this.affect.clear(); this.state.control = undefined;
         this.gateway = gateway; this.abort = abort;
         this.state.attachments = this.state.attachments.filter(m => m.endpoint === gateway.url && m.epoch === caps.epoch);
         this.state.capabilities = caps; this.state.connected = true; this.state.notice = 'Gateway connected.';
         break;
       }
       case 'disconnect':
-        this.observation.clear(); this.state.control = undefined;
+        this.observation.clear(); this.affect.clear(); this.state.control = undefined;
         await this.shared.disconnect();
         this.abort.abort(); await this.task; this.task = undefined; this.gateway = undefined;
         this.state.connected = false; this.state.notice = 'Disconnected. Device requests are not cancelled.'; break;
@@ -207,7 +212,7 @@ export class Controller {
         const id = randomUUID();
         this.persist(project => {
           if (project.conversations.length >= 64) throw Error('This project has 64 conversations. Open another project folder.');
-          project.conversations.push({ id, title: cmd.title, turns: [] });
+          project.conversations.push({ id, title: cmd.title, systemPrompt: cmd.systemPrompt ?? DEFAULT_PROMPT, turns: [] });
         }); this.state.selected = id; break;
       }
       case 'select':
@@ -239,6 +244,7 @@ export class Controller {
         const attachments = structuredClone(this.state.attachments);
         const messages = conversation.turns.filter(t => t.phase === 'completed').flatMap(t => [
           { role: 'user', content: input(t.prompt, t.media || []) }, { role: 'assistant', content: t.reply }]);
+        if (conversation.systemPrompt) messages.unshift({ role: 'system', content: conversation.systemPrompt });
         messages.push({ role: 'user', content: input(cmd.text, attachments) });
         if (Buffer.byteLength(JSON.stringify(messages)) > (this.state.capabilities?.promptBytes || 0))
           throw Error('The conversation exceeds the gateway prompt limit. Start another conversation.');

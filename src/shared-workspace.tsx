@@ -27,7 +27,7 @@ export function SharedWorkspace() {
   const { state } = useStore(), shared = state.shared, person = shared.person;
   const [name, setName] = useState(''), [scope, setScope] = useState<Scope>('private'), [member, setMember] = useState('');
   const [permissions, setPermissions] = useState<string[]>(['read']), [draft, setDraft] = useState(''), [sending, setSending] = useState(false);
-  const [conversationName, setConversationName] = useState(''), [floor, setFloor] = useState('');
+  const [floor, setFloor] = useState('');
   const selected = shared.spaces.items.find(s => s.id === shared.selectedSpace);
   const inputs = shared.records.filter(r => r.lineage === person?.lineage && r.path === `/aotx/v1/shared/conversations/${shared.selectedConversation}/inputs`);
   const label = (id: string) => shared.labels[id] || id;
@@ -56,8 +56,7 @@ export function SharedWorkspace() {
             <button disabled={shared.conversations.next === '0'} onClick={() => void send({ type: 'sharedPage', kind: 'conversations', cursor: shared.conversations.next })}>Next conversations</button></div>
             <div className="shared-list">{shared.conversations.items.map(c => <button key={String(c.id)} className={c.id === shared.selectedConversation ? 'selected' : ''} onClick={() => void send({ type: 'sharedSelect', kind: 'conversation', id: String(c.id) })}>
               <b>{label(String(c.id))}</b><small>{c.busy ? 'Active input' : 'Available'} / Next order {String(c.next_order)}</small></button>)}</div>
-            <label>Conversation name<input aria-label="Shared conversation name" value={conversationName} onChange={e => setConversationName(e.target.value)} maxLength={120} /></label>
-            <button disabled={!conversationName} onClick={() => void send({ type: 'sharedConversation', name: conversationName })}>Create conversation</button></>}
+            <button onClick={() => windows.setup('shared')}>New CCIR conversation</button></>}
         </section></div>
         {shared.selectedSpace && <details><summary>Space membership and names</summary><p><code>{shared.selectedSpace}</code> / {String(selected?.scope || '')}</p>
           <label>Space label<input aria-label="Space label" defaultValue={label(shared.selectedSpace)} key={shared.selectedSpace} maxLength={120} onBlur={e => {
@@ -72,6 +71,11 @@ export function SharedWorkspace() {
           <p className="footnote">An empty rights selection blocks access. The runtime checks current grants and manage permission.</p>
         </details>}
         {shared.selectedConversation && <section className="shared-chat"><h3>{label(shared.selectedConversation)}</h3>
+          <details><summary>Conversation instructions</summary>
+            <button disabled={!shared.promptBytes} onClick={() => void send({ type: 'sharedPromptRead' })}>Refresh instructions</button>
+            <p>{shared.prompt?.mode === 'runtime' ? 'This conversation inherits the runtime role. Create a new conversation to use different instructions.' :
+              shared.prompt ? shared.prompt.text || 'No identity instructions. Runtime memory rules still apply.' : 'Conversation instructions are unavailable.'}</p>
+            {shared.promptError && <p className="warning">{shared.promptError}</p>}</details>
           {inputs.map(row => { const body = JSON.parse(row.body), result = row.result ? receipt(row.result, row.lineage) : undefined;
             return <div key={row.key} className="shared-turn"><article className="shared-message"><header>You</header><p>{body.text}</p></article>
               {result && <article className="shared-message"><header>{body.model}</header><p>{new TextDecoder('utf-8', { fatal: true }).decode(result.bytes, { stream: !['completed', 'failed', 'cancelled', 'interrupted'].includes(result.state) || result.next_offset !== result.output_bytes })}</p></article>}

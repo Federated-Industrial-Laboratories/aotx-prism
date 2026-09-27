@@ -2,7 +2,7 @@
 // Restore bounded panel layouts and expose keyboard-accessible dock commands.
 import type { AnchoredBox, DockviewApi, SerializedDockview } from 'dockview';
 import { send, snapshot } from './store';
-export const titles = { conversation: 'Conversation', connection: 'Connection', project: 'Project',
+export const titles = { affect: 'Affect', setup: 'Conversation setup', conversation: 'Conversation', connection: 'Connection', project: 'Project',
   models: 'Models', files: 'Project files', inspector: 'Request details', activity: 'Activity', runtime: 'Runtime setup', sources: 'Media sources', shared: 'Shared workspace', ccir: 'CCIR files', evidence: 'Memory evidence' } as const;
 export type PanelId = keyof typeof titles;
 export function validateLayout(raw: string): SerializedDockview {
@@ -50,6 +50,7 @@ class Windows {
     api.onDidRemovePanel(settle);
     api.onDidMaximizedGroupChange(settle);
   }
+  setup(kind: 'ordinary' | 'shared') { this.open('setup'); this.api?.getPanel('setup')?.api.updateParameters({ kind }); }
   private geometry() {
     const w = this.api?.width || 1000, h = this.api?.height || 700;
     return { x: Math.max(8, w - 450), y: 24, width: Math.min(420, w - 16), height: Math.min(520, h - 40) };

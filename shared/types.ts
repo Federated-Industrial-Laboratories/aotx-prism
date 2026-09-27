@@ -2,6 +2,7 @@
 // Define the project data and the bounded desktop commands exposed to views.
 export type Phase = 'submitting' | 'accepted' | 'running' | 'completed' | 'failed' |
   'cancelled' | 'unknown' | 'interrupted' | 'expired';
+import type { AffectSettingsState, AffectCommand } from './affect.js';
 import type { SetupCommand, RuntimeState, RuntimeInspection, LocalCatalog, Gpu } from './setup.js';
 import type { SharedCommand, SharedState } from './shared.js';
 import type { Control, ControlChoice } from './controls.js';
@@ -16,7 +17,7 @@ export interface Turn {
   media?: Media[]; control?: ControlChoice;
   usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 }
-export interface Conversation { id: string; title: string; turns: Turn[]; archived?: boolean }
+export interface Conversation { id: string; title: string; turns: Turn[]; systemPrompt?: string; archived?: boolean }
 export interface Project {
   schema: 2; name: string; endpoint: string; model: string; profiles: GenerationProfile[];
   maxTokens: number; temperature: number; conversations: Conversation[];
@@ -36,13 +37,13 @@ export interface State {
   notice: string; saved: boolean; layout: string | null; theme: 'silver' | 'graphite';
   catalog: LocalCatalog; runtime: RuntimeState; attachments: Media[]; uploading: boolean;
   shared: SharedState;
-  ccir: CcirState; evidence: EvidenceState; control?: ControlChoice;
+  affect: AffectSettingsState; ccir: CcirState; evidence: EvidenceState; control?: ControlChoice;
 }
-export type Command = EvidenceCommand | SetupCommand | SharedCommand | CcirCommand
+export type Command = AffectCommand | EvidenceCommand | SetupCommand | SharedCommand | CcirCommand
   | { type: 'state' } | { type: 'chooseFolder' }
   | { type: 'openProject'; path: string }
   | { type: 'connect'; url: string; token: string } | { type: 'disconnect' }
-  | { type: 'newConversation'; title: string } | { type: 'select'; id: string }
+  | { type: 'newConversation'; title: string; systemPrompt?: string } | { type: 'select'; id: string }
   | { type: 'profile'; model: string; maxTokens: number; temperature: number }
   | { type: 'send'; id: string; text: string }
   | { type: 'cancel' | 'resume'; id: string }

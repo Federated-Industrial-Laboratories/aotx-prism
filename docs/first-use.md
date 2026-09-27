@@ -25,7 +25,9 @@ Enter the token again after restarting PRISM.
 3. Open **Models** and select an advertised model.
 4. Apply the token limit and temperature.
 5. Select **New conversation**.
-6. Enter text and select **Send message**.
+6. Set the conversation name and system prompt.
+7. Select **Create conversation**.
+8. Enter text and select **Send message**.
 
 Use Ctrl+Enter to send from the message box. Tab and Shift+Tab move keyboard focus.
 Enter or Space activates a focused button. Escape closes the open Windows menu.

@@ -29,6 +29,7 @@ try {
   await page.getByRole('button', { name: 'Apply settings', exact: true }).click();
   await page.getByRole('button', { name: 'Close models', exact: true }).click();
   await page.getByRole('button', { name: '+ New conversation', exact: true }).click();
+    await page.getByRole('button', { name: 'Create conversation', exact: true }).click();
   for (const prompt of ['The check color is blue. Reply with the check color only.', 'What check color did I give you? Reply with that color only.']) {
     await page.getByLabel('Message', { exact: true }).fill(prompt);
     await page.getByRole('button', { name: 'Send message', exact: true }).click();
