@@ -15,6 +15,9 @@ The client targets the ordinary inference routes in AOTX 0.3.5:
 | `POST /aotx/v1/requests` | One native admission for a user submission |
 | `GET /aotx/v1/requests/{id}?cursor={byte}` | Incremental output and request state |
 | `POST /aotx/v1/requests/{id}/cancel` | Exact request cancellation |
+| `POST /aotx/v1/media` | Selected JPEG or WAV bytes |
+| `GET /aotx/v1/media` | Current owned sources after complete or interrupted uploads |
+| `DELETE /aotx/v1/media/{id}` | Explicit removal of an unused source |
 
 Remote connections require HTTPS. HTTP is permitted for exact loopback addresses
 and `localhost`. SSH tunnels can expose a remote gateway on loopback. Redirects
@@ -43,8 +46,8 @@ silently replace another writer's accepted revision. Reopen after a conflict.
 The metadata directory must be private and owned by the current account.
 
 Project file access is read-only. Paths are restricted to visible entries in the
-selected folder. Links, device files, non-UTF-8 text and oversized files are refused.
-Folder navigation below the selected project is not implemented.
+selected folder and its visible subfolders. Links, device files, non-UTF-8 text
+and oversized files are refused. Each path component is opened without following links.
 
 | Limit | Value |
 | --- | --- |
@@ -52,11 +55,15 @@ Folder navigation below the selected project is not implemented.
 | Turns per conversation | 128 |
 | Serialized project | 16 MiB |
 | Output per request | 1 MiB |
-| HTTP response and request body | 2 MiB each |
-| HTTP exchange deadline | 30 seconds |
+| JSON HTTP response and request body | 2 MiB each |
+| Media upload | 32 MiB or the lower advertised quota |
+| HTTP exchange deadline | 30 seconds; 300 seconds for media upload |
 | Text preview | 128 KiB |
 | Directory view | 128 entries, at most 4,096 inspected entries |
-| Saved layout | 256 KiB, seven known panels |
+| Saved layout | 256 KiB, nine known panels |
+| Nested folder depth | 16 components |
+| Saved generation profiles | 32 per project |
+| Saved runtime profiles | 32 per desktop account |
 
 Gateway model and prompt limits still apply. PRISM does not truncate a conversation
 silently to fit them. A large project can reach its byte limit before its count limits.
@@ -71,6 +78,12 @@ application frame and validates each named command.
 Layout and theme are stored separately from project content. Invalid layouts
 return to the default workspace. Closing a utility window does not own or end
 request execution. No renderer operation executes a shell command.
+
+The runtime adapter uses fixed executable names and argument arrays. A child
+supervisor owns the launched process groups. It stops them on explicit shutdown
+or lost desktop IPC. External gateways have no process ownership controls.
+Local runtime profiles and recent folders are stored separately from projects.
+See [setup](setup.md) for lifecycle, media and project migration behavior.
 
 Electron supplies the desktop host. React and Dockview implement the web views.
 A future host can implement the same typed bridge. Additional gateway features

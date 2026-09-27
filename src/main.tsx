@@ -22,7 +22,7 @@ function App() {
       {state.connected ? 'Gateway connected' : 'Gateway disconnected'}</span><span>AOTX-PRISM / {state.version}</span></div>
     <nav className="menu-bar" aria-label="Application menu">
       <button onClick={() => windows.open('project')}>Project</button><button onClick={() => windows.open('connection')}>Connection</button>
-      <button onClick={() => windows.open('models')}>Models</button>
+      <button onClick={() => windows.open('models')}>Models</button><button onClick={() => windows.open('runtime')}>Runtime setup</button>
       <div className="window-menu"><button aria-expanded={menu} onClick={() => setMenu(!menu)}>Windows</button>
         {menu && <div className="menu-popup" onKeyDown={e => { if (e.key === 'Escape') setMenu(false); }}>
           {(Object.keys(titles) as PanelId[]).map(id => <button key={id} onClick={() => { windows.open(id); setMenu(false); }}>{titles[id]}</button>)}
@@ -35,13 +35,13 @@ function App() {
       <button className="new-conversation" onClick={async () => {
         const reply = await send({ type: 'newConversation', title: `Conversation ${state.project.conversations.length + 1}` }); if (reply) windows.open('conversation', false);
       }}>+ New conversation</button><div className="sidebar-label">CONVERSATIONS <span>{state.project.conversations.length}</span></div>
-      <div className="conversation-list">{state.project.conversations.map(c => <button key={c.id} className={state.selected === c.id ? 'selected' : ''} onClick={() => {
+      <div className="conversation-list">{state.project.conversations.filter(c => !c.archived).map(c => <button key={c.id} className={state.selected === c.id ? 'selected' : ''} onClick={() => {
         void send({ type: 'select', id: c.id }); windows.open('conversation', false);
       }}><span className="conversation-icon">#</span><span>{c.title}<small>{c.turns.length} {c.turns.length === 1 ? 'message' : 'messages'}</small></span></button>)}</div>
       <div className="sidebar-bottom"><button onClick={() => windows.open('files')}>Project files <span>Read-only</span></button>
         <div><span className={`status-dot ${state.connected ? 'online' : ''}`} />{state.connected ? 'Gateway connected' : 'Gateway offline'}</div>
         <p>Project history stays in the folder shown above.</p></div></aside>
-      <div className="workspace"><DockviewReact components={components} theme={themes[state.theme]} onReady={event => windows.attach(event.api)} className="dockview-theme-light" /></div>
+      <div className="workspace"><DockviewReact floatingGroupBounds="boundedWithinViewport" components={components} theme={themes[state.theme]} onReady={event => windows.attach(event.api)} className="dockview-theme-light" /></div>
     </div>
     {(error || state.notice || !state.saved) && <div className={`notice ${error || !state.saved ? 'warning' : ''}`} role={error ? 'alert' : 'status'}>
       <span>{error || state.notice}</span>{error && <button aria-label="Dismiss error" onClick={clear}>Dismiss</button>}</div>}

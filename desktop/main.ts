@@ -5,6 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { dirname, join, resolve, extname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { Controller } from './controller.js';
+import { Catalog } from './catalog.js';
 import { command } from '../shared/validate.js';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 protocol.registerSchemesAsPrivileged([{ scheme: 'prism', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
@@ -42,7 +43,7 @@ else {
     }, undefined, (layout, theme) => {
       writeFileSync(`${preferences}.tmp`, JSON.stringify({ layout, theme }), { mode: 0o600 });
       renameSync(`${preferences}.tmp`, preferences);
-    });
+    }, new Catalog(join(statePath, 'local')));
     controller.state.version = app.getVersion();
     try {
       const raw = readFileSync(preferences, 'utf8');
@@ -58,6 +59,22 @@ else {
       if (cmd.type === 'chooseFolder') {
         const result = await dialog.showOpenDialog(win, { title: 'Open project folder', properties: ['openDirectory', 'createDirectory'] });
         return { state: controller!.state, folder: result.canceled ? undefined : result.filePaths[0] };
+      }
+      if (cmd.type === 'choosePath') {
+        const result = await dialog.showOpenDialog(win, { title: 'Select runtime path', properties: [cmd.kind === 'directory' ? 'openDirectory' : 'openFile'] });
+        return { state: controller!.state, folder: result.canceled ? undefined : result.filePaths[0] };
+      }
+      if (cmd.type === 'uploadMedia') {
+        const result = await dialog.showOpenDialog(win, { title: 'Attach media', properties: ['openFile'], filters: [{ name: 'JPEG or WAV', extensions: ['jpg', 'jpeg', 'wav'] }] });
+        return result.canceled ? { state: controller!.state } : controller!.uploadFile(result.filePaths[0]);
+      }
+      if (cmd.type === 'exportProject') {
+        const result = await dialog.showSaveDialog(win, { title: 'Export project history', defaultPath: 'project-history.json', filters: [{ name: 'JSON', extensions: ['json'] }] });
+        if (!result.canceled && result.filePath) {
+          const { atomicExport } = await import('./export.js');
+          atomicExport(result.filePath, JSON.stringify(controller!.state.project, null, 2));
+        }
+        return { state: controller!.state };
       }
       try { return await controller!.run(cmd); }
       catch (error) { throw Error(error instanceof Error ? error.message : 'The command failed.'); }

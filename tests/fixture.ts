@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Supply a bounded gateway fixture with explicit byte windows and request modes.
 import { createServer } from 'node:http';
+import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 export const token = 'test-only-token-'.repeat(3);
 export const handle = 'req-0000000000000001-' + 'a'.repeat(32);
@@ -14,17 +15,27 @@ export function status(cursor: number, bytes: Buffer, next: number, phase = 'com
     output: { encoding: 'base64', bytes: bytes.subarray(cursor, next).toString('base64'), cursor: String(cursor),
       next_cursor: String(next), total_bytes: String(bytes.length) } };
 }
-export async function fixture() {
+export async function fixture(media = false) {
+  const sources = new Map<string, unknown>(), discovery = structuredClone(caps);
+  if (media) { discovery.models[0].input.push('image', 'audio'); Object.assign(discovery.features, { private_media: true }); Object.assign(discovery.limits, { upload_bytes: 33554432, private_media_bytes: '33554432' }); }
   const calls: { method: string; path: string; body: unknown }[] = [];
   let mode: 'normal' | 'lost' | 'lost-handle' | 'expired' | 'hold' = 'normal', cancelled = false;
   const bytes = Buffer.from('Hello, project. Unicode: \u20ac.');
   const server = createServer(async (req, res) => {
     if (req.headers.authorization !== `Bearer ${token}`) { res.writeHead(401).end('{}'); return; }
-    let raw = ''; for await (const chunk of req) raw += chunk;
+    const parts: Buffer[] = []; for await (const chunk of req) parts.push(chunk);
+    const bytesIn = Buffer.concat(parts), raw = bytesIn.toString();
     const url = new URL(req.url!, 'http://localhost');
-    calls.push({ method: req.method!, path: url.pathname + url.search, body: raw ? JSON.parse(raw) : null });
+    calls.push({ method: req.method!, path: url.pathname + url.search, body: req.headers['content-type']?.startsWith('image/') || req.headers['content-type']?.startsWith('audio/') ? { bytes: bytesIn.length } : raw ? JSON.parse(raw) : null });
     res.setHeader('Content-Type', 'application/json');
-    if (url.pathname.endsWith('capabilities')) { res.end(JSON.stringify(caps)); return; }
+    if (url.pathname.endsWith('capabilities')) { res.end(JSON.stringify(discovery)); return; }
+    if (url.pathname.includes('/media')) {
+      const id = 'media-' + (sources.size + 1).toString(16).padStart(32, '0');
+      if (req.method === 'POST') { const source = { id, sha256: createHash('sha256').update(bytesIn).digest('hex'), bytes: String(bytesIn.length), phase: 6, status: 0, format: req.headers['content-type'] === 'image/jpeg' ? 1 : 3 };
+        sources.set(id, source); if (mode === 'lost') { req.socket.destroy(); return; } res.end(JSON.stringify(source)); return; }
+      if (req.method === 'DELETE') { sources.delete(url.pathname.split('/').at(-1)!); res.writeHead(204).end(); return; }
+      res.end(JSON.stringify({ schema: 'aotx.media-list.v1', runtime_epoch: '1', data: [...sources.values()], next_cursor: null })); return;
+    }
     if (req.method === 'POST' && url.pathname.endsWith('/cancel')) { cancelled = true; res.end(JSON.stringify(status(0, bytes, bytes.length, 'cancelled'))); return; }
     if (req.method === 'POST') {
       if (mode === 'lost') { req.socket.destroy(); return; }

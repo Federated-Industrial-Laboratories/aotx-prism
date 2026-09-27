@@ -73,3 +73,7 @@ dd { margin: 5px 0 17px; overflow-wrap: anywhere; line-height: 1.5; font-size: 1
 @container (max-width: 570px) { .steps { grid-template-columns: 1fr; } .welcome-heading img { display: none; } .welcome h2 { font-size: 17px; } }
 .conversation-view { container-type: inline-size; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+.path-picker { display: flex; gap: 6px; }
+.path-picker input { min-width: 0; flex: 1; }
+.attachment-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; font-size: 11px; }
+.attachment-list > span { border: 1px solid var(--line); padding: 4px; overflow-wrap: anywhere; }

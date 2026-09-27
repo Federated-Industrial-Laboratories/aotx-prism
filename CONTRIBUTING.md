@@ -21,6 +21,7 @@ Run these commands before a commit:
 ```sh
 npm run check
 npm run test:desktop
+node --import tsx tests/setup-desktop.mjs
 git diff --check
 git diff --cached --check
 ```

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Validate persisted project data and view commands before they cross boundaries.
 import type { Command, Project, Turn } from './types.js';
+import { setupCommand } from './setup.js';
 export const MAX_PROJECT = 16 * 1024 * 1024;
 export const MAX_OUTPUT = 1024 * 1024;
 export const HANDLE = /^req-[0-9a-f]{16}-[0-9a-f]{32}$/;
@@ -31,7 +32,16 @@ export function endpoint(value: unknown): string {
 }
 export function project(value: unknown): Project {
   const row = object(value);
-  if (row.schema !== 1) throw Error('Unsupported project version.');
+  if (row.schema === 1) { row.schema = 2; row.profiles = []; }
+  if (row.schema !== 2) throw Error('Unsupported project version.');
+  if (!Array.isArray(row.profiles) || row.profiles.length > 32) throw Error('Invalid profile count.');
+  const names = new Set<string>();
+  for (const value of row.profiles) {
+    const p = object(value), name = text(p.name, 80); text(p.model, 256);
+    if (names.has(name) || !/^[a-f0-9]{64}$/.test(text(p.sha256, 64))) throw Error('Invalid generation profile.');
+    names.add(name); number(p.temperature, 0, 2);
+    if (!Number.isInteger(number(p.maxTokens, 1, 1048576))) throw Error('Invalid profile token limit.');
+  }
   text(row.name, 120); text(row.model, 256, true); text(row.endpoint, 2048, true);
   if (row.endpoint) endpoint(row.endpoint);
   number(row.maxTokens, 1, 1048576); number(row.temperature, 0, 2);
@@ -42,6 +52,7 @@ export function project(value: unknown): Project {
     const conversation = object(raw), id = text(conversation.id, 36);
     if (!ID.test(id) || ids.has(id)) throw Error('Invalid conversation identity.');
     ids.add(id); text(conversation.title, 120);
+    if (conversation.archived !== undefined && typeof conversation.archived !== 'boolean') throw Error('Invalid archive state.');
     if (!Array.isArray(conversation.turns) || conversation.turns.length > 128) throw Error('Invalid conversation length.');
     for (const item of conversation.turns) { validateTurn(item);
       const turnId = (item as Turn).id; if (ids.has(turnId)) throw Error('Repeated turn identity.'); ids.add(turnId);
@@ -54,6 +65,14 @@ function validateTurn(value: unknown): void {
   if (!ID.test(text(row.id, 36)) || !PHASES.has(text(row.phase, 20))) throw Error('Invalid turn identity or state.');
   text(row.prompt, 65536); text(row.model, 256); endpoint(row.endpoint);
   text(row.reply, MAX_OUTPUT, true); text(row.error, 1024, true); text(row.created, 40);
+  if (row.media !== undefined) {
+    if (!Array.isArray(row.media) || row.media.length > 8) throw Error('Invalid attachment count.');
+    for (const item of row.media) {
+      const m = object(item);
+      if (!/^media-[a-f0-9]{32}$/.test(text(m.id, 38)) || !/^[a-f0-9]{64}$/.test(text(m.sha256, 64)) || !['image', 'audio'].includes(String(m.modality))) throw Error('Invalid saved attachment.');
+      text(m.name, 255); endpoint(m.endpoint); text(m.epoch, 20); number(m.bytes, 1, 33554432);
+    }
+  }
   if (row.handle !== undefined && !HANDLE.test(text(row.handle, 53))) throw Error('Invalid request handle.');
   if (row.epoch !== undefined && !/^\d{1,20}$/.test(text(row.epoch, 20))) throw Error('Invalid runtime epoch.');
   number(row.cursor, 0, MAX_OUTPUT);
@@ -76,8 +95,11 @@ export function terminal(turn: Turn): boolean {
 }
 export function command(value: unknown): Command {
   const row = object(value), type = text(row.type, 24);
+  const setup = setupCommand(row); if (setup) return setup;
   switch (type) {
-    case 'state': case 'chooseFolder': case 'disconnect': case 'files': break;
+    case 'state': case 'chooseFolder': case 'disconnect': case 'uploadMedia': case 'listMedia': break;
+    case 'files': relativePath(row.path ?? '', true); break;
+    case 'removeAttachment': case 'deleteMedia': if (!/^media-[a-f0-9]{32}$/.test(text(row.id, 38))) throw Error('Invalid media handle.'); break;
     case 'openProject': text(row.path, 4096); break;
     case 'connect': endpoint(row.url); if (!/^[^\s\x00-\x1f\x7f]{32,256}$/.test(text(row.token, 256))) throw Error('Enter a valid bearer token.'); break;
     case 'newConversation': text(row.title, 120); break;
@@ -85,10 +107,16 @@ export function command(value: unknown): Command {
     case 'send': text(row.id, 36); text(row.text, 65536); break;
     case 'profile': text(row.model, 256); number(row.maxTokens, 1, 1048576); number(row.temperature, 0, 2);
       if (!Number.isInteger(row.maxTokens)) throw Error('Use a whole token limit.'); break;
-    case 'readFile': if (/[\\/]/.test(text(row.name, 255)) || String(row.name).startsWith('.')) throw Error('Select a project file.'); break;
+    case 'readFile': relativePath(row.name); break;
     case 'layout': text(row.value, 262144); break;
     case 'theme': if (!['silver', 'graphite'].includes(String(row.value))) throw Error('Invalid theme.'); break;
     default: throw Error('Unsupported desktop command.');
   }
   return row as unknown as Command;
+}
+export function relativePath(value: unknown, empty = false): string {
+  const path = text(value, 4096, empty);
+  if (empty && path === '') return path;
+  if (path.includes('\\') || path.split('/').length > 16 || path.split('/').some(p => !p || p.startsWith('.') || p.length > 255)) throw Error('Select a visible path inside the project.');
+  return path;
 }

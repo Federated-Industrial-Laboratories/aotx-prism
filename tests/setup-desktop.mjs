@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: Apache-2.0
+// Check setup, profiles, nested files, export and media through the visible desktop.
+// Inputs: built app and output folder. Output: receipt and captures. Exit: 0 pass, 1 failure.
+import { _electron as electron } from 'playwright';
+import assert from 'node:assert/strict';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { fixture, token } from './fixture.ts';
+const root = mkdtempSync(join(tmpdir(), 'prism-setup-view-')), project = join(root, 'Project'), output = process.argv[2];
+mkdirSync(join(project, 'notes'), { recursive: true }); writeFileSync(join(project, 'notes/example.txt'), 'Nested project text.');
+const jpg = join(root, 'sample.jpg'); writeFileSync(jpg, Buffer.from([255,216,255,224,0,16,74,70,73,70,0,1,1,0,0,1,0,1,0,0]));
+const server = await fixture(true), checks = [], errors = [], env = { ...process.env, PRISM_STATE_DIR: join(root, 'state') }; delete env.ELECTRON_RUN_AS_NODE;
+if (output) mkdirSync(output, { recursive: true });
+const app = await electron.launch({ executablePath: resolve('node_modules/electron/dist/electron'), args: ['.'], env });
+try {
+  const page = await app.firstWindow(); page.on('pageerror', e => errors.push(e.message));
+  await page.getByText('Conversation workspace', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Project', exact: true }).click();
+  await page.getByLabel('Folder path').fill(project); await page.getByRole('button', { name: 'Open project', exact: true }).click();
+  await page.getByRole('button', { name: 'Close project', exact: true }).click();
+  await page.getByRole('button', { name: 'Project files Read-only' }).click();
+  await page.getByRole('button', { name: /DIR notes/ }).click(); await page.getByRole('button', { name: /TXT example.txt/ }).click();
+  await page.getByText('Nested project text.', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Up one folder' }).click(); assert.equal(await page.locator('.file-preview').count(), 0);
+  await page.getByRole('button', { name: 'Close files', exact: true }).click(); checks.push('Nested file browsing and stale preview removal');
+  await page.getByRole('button', { name: 'Connection', exact: true }).click();
+  await page.getByLabel('Gateway URL', { exact: true }).fill(server.url); await page.getByLabel('Bearer token', { exact: true }).fill(token);
+  await page.getByRole('button', { name: 'Connect', exact: true }).click(); await page.getByText('Gateway connected.', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Close connection', exact: true }).click();
+  await page.getByRole('button', { name: 'Models', exact: true }).click();
+  await page.getByLabel('Maximum output tokens', { exact: true }).fill('71'); await page.getByRole('button', { name: 'Apply settings', exact: true }).click();
+  await page.getByLabel('Generation profile name', { exact: true }).fill('Careful'); await page.getByRole('button', { name: 'Save current settings', exact: true }).click();
+  await page.getByLabel('Maximum output tokens', { exact: true }).fill('12'); await page.getByRole('button', { name: 'Apply settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Apply Careful', exact: true }).click(); assert.equal(await page.getByLabel('Maximum output tokens', { exact: true }).inputValue(), '71');
+  await page.getByRole('button', { name: 'Close models', exact: true }).click(); checks.push('Saved generation profile applies its settings');
+  await page.getByRole('button', { name: '+ New conversation', exact: true }).click();
+  await app.evaluate(({ dialog }, file) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] }); }, jpg);
+  await page.getByRole('button', { name: 'Attach media', exact: true }).click(); await page.getByRole('button', { name: 'Remove attachment sample.jpg', exact: true }).waitFor();
+  await page.getByLabel('Message', { exact: true }).fill('Read the attached source.'); await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await page.locator('.phase-completed').waitFor(); assert.equal(await page.locator('.assistant-message pre').innerText(), server.bytes.toString());
+  checks.push('Native file picker, upload and exact media handle submission');
+  await page.getByRole('button', { name: 'Project', exact: true }).click(); await page.getByLabel('Conversation name', { exact: true }).fill('Image record');
+  await page.getByRole('button', { name: 'Rename conversation', exact: true }).click(); await page.getByRole('button', { name: 'Archive conversation', exact: true }).click();
+  assert.equal(await page.locator('.conversation-list button').count(), 0);
+  await page.getByRole('button', { name: 'Restore conversation', exact: true }).click(); assert.equal(await page.locator('.conversation-list button').count(), 1);
+  const file = join(root, 'export.json'); await app.evaluate(({ dialog }, path) => { dialog.showSaveDialog = async () => ({ canceled: false, filePath: path }); }, file);
+  await page.getByRole('button', { name: 'Export project history', exact: true }).click();
+  await page.waitForTimeout(150); assert.equal(JSON.parse(readFileSync(file, 'utf8')).conversations[0].title, 'Image record'); assert.ok(!readFileSync(file, 'utf8').includes(token));
+  assert.equal(await page.getByLabel('Recent projects').locator('option').filter({ hasText: project }).count(), 1);
+  await page.getByRole('button', { name: 'Close project', exact: true }).click(); checks.push('Rename, archive, restore, recent folder and credential-free export');
+  await page.getByRole('button', { name: 'Windows', exact: true }).click(); await page.getByRole('button', { name: 'Media sources', exact: true }).click();
+  await page.getByRole('button', { name: 'Refresh sources', exact: true }).click(); await page.getByLabel('Media source', { exact: true }).selectOption({ index: 1 });
+  await page.getByLabel('Remove this exact gateway source').check(); await page.getByRole('button', { name: 'Delete selected source', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('[aria-label="Media source"]').options.length === 1);
+  await page.getByRole('button', { name: 'Close sources', exact: true }).click(); checks.push('Explicit gateway media removal');
+  await page.getByRole('button', { name: 'Runtime setup', exact: true }).click();
+  assert.equal(await page.getByRole('button', { name: 'Start runtime', exact: true }).isEnabled(), false);
+  assert.equal(await page.getByRole('button', { name: 'Stop owned runtime', exact: true }).isEnabled(), false);
+  checks.push('External connection has no owned runtime controls');
+  if (output) await page.screenshot({ path: join(output, 'setup-silver.png') });
+  await page.getByLabel('Theme', { exact: true }).selectOption('graphite');
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(860, 620));
+  await page.waitForFunction(() => [...document.querySelectorAll('.dv-resize-container')].every(el => { const r = el.getBoundingClientRect(); return r.x >= 0 && r.y >= 0 && r.right <= innerWidth && r.bottom <= innerHeight; }));
+  assert.ok(await page.locator('.dv-resize-container').count());
+  if (output) await page.screenshot({ path: join(output, 'setup-minimum.png') });
+  assert.deepEqual(errors, []);
+  if (output) writeFileSync(join(output, 'checks.json'), JSON.stringify({ checks, errors }, null, 2));
+  console.log(JSON.stringify({ checks, errors }));
+} catch (error) { if (output) await (await app.firstWindow()).screenshot({ path: join(output, 'failure.png') }); throw error; }
+finally { await app.close(); await server.close(); rmSync(root, { recursive: true }); }

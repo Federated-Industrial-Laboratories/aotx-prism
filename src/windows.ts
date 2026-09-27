@@ -3,14 +3,14 @@
 import type { AnchoredBox, DockviewApi, SerializedDockview } from 'dockview';
 import { send, snapshot } from './store';
 export const titles = { conversation: 'Conversation', connection: 'Connection', project: 'Project',
-  models: 'Models', files: 'Project files', inspector: 'Request details', activity: 'Activity' } as const;
+  models: 'Models', files: 'Project files', inspector: 'Request details', activity: 'Activity', runtime: 'Runtime setup', sources: 'Media sources' } as const;
 export type PanelId = keyof typeof titles;
 export function validateLayout(raw: string): SerializedDockview {
   if (raw.length > 262144) throw Error('Invalid layout size.');
   const value = JSON.parse(raw);
   if (!value || typeof value !== 'object' || !value.panels || value.popoutGroups?.length) throw Error('Invalid layout.');
   const panels = Object.entries(value.panels);
-  if (panels.length > 7 || panels.some(([id, p]) => !Object.hasOwn(titles, id) ||
+  if (panels.length > Object.keys(titles).length || panels.some(([id, p]) => !Object.hasOwn(titles, id) ||
       (p as { contentComponent?: string }).contentComponent !== 'panel')) throw Error('Invalid panel identity.');
   let nodes = 0;
   function visit(item: unknown, depth: number): void {
@@ -22,6 +22,7 @@ export function validateLayout(raw: string): SerializedDockview {
 }
 class Windows {
   api?: DockviewApi; private restoring = false; private timer?: ReturnType<typeof setTimeout>;
+  private observer?: ResizeObserver;
   private zoom?: { id: PanelId; group: string; floating?: AnchoredBox };
   attach(api: DockviewApi) {
     this.api = api; this.restoring = true;
@@ -29,7 +30,17 @@ class Windows {
     catch { this.reset(); }
     if (!api.getPanel('conversation')) this.open('conversation', false);
     this.restoring = false;
+    const contain = () => {
+      for (const group of api.groups) if (group.api.location.type === 'floating') {
+        const width = Math.min(group.width, api.width), height = Math.min(group.height, api.height);
+        if (width < group.width || height < group.height) group.api.setSize({ width, height });
+      }
+    };
+    this.observer?.disconnect();
+    this.observer = new ResizeObserver(() => requestAnimationFrame(contain));
+    const workspace = document.querySelector('.workspace'); if (workspace) this.observer.observe(workspace);
     api.onDidLayoutChange(() => {
+      requestAnimationFrame(contain);
       if (this.restoring) return;
       clearTimeout(this.timer); this.timer = setTimeout(() => this.save(), 250);
     });

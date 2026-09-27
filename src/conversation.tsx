@@ -9,7 +9,7 @@ export function Conversation() {
   const [draft, setDraft] = useState(drafts.get(state.selected) || ''), end = useRef<HTMLDivElement>(null);
   useEffect(() => { setDraft(drafts.get(state.selected) || ''); }, [state.selected]);
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [conversation?.turns.at(-1)?.reply.length]);
-  const pending = conversation?.turns.some(t => !['completed', 'failed', 'cancelled', 'expired'].includes(t.phase));
+  const pending = conversation?.archived || state.uploading || conversation?.turns.some(t => !['completed', 'failed', 'cancelled', 'expired'].includes(t.phase));
   async function submit() {
     if (!conversation || !draft.trim()) return;
     const text = draft, id = conversation.id;
@@ -34,7 +34,7 @@ export function Conversation() {
         <p className="footnote">Conversation history is saved in this project. Ordinary conversations do not update CCIR memory.</p>
       </div>}
       {conversation?.turns.map(turn => <article className="turn" key={turn.id} data-turn={turn.id}>
-        <div className="message user-message"><div className="message-head"><span className="eyebrow">YOU</span><span className="message-kind">Message</span></div><pre>{turn.prompt}</pre></div>
+        <div className="message user-message"><div className="message-head"><span className="eyebrow">YOU</span><span className="message-kind">Message</span></div><pre>{turn.prompt}</pre>{turn.media?.map(m => <p className="footnote" key={m.id}>{m.name} / {m.modality} / {m.sha256}</p>)}</div>
         <div className="message assistant-message"><div className="message-head"><span className="eyebrow">{turn.model}</span>
           <span className={`phase phase-${turn.phase}`}>{turn.phase}</span></div>
           <pre>{turn.reply || (turn.phase === 'submitting' ? 'Submitting request...' : turn.phase === 'accepted' || turn.phase === 'running' ? 'Waiting for output...' : 'No output received.')}</pre>
@@ -49,10 +49,14 @@ export function Conversation() {
     </div>
     <form className="composer" onSubmit={e => { e.preventDefault(); void submit(); }}>
       <textarea aria-label="Message" placeholder={conversation ? 'Write a message...' : 'Create a conversation to begin.'}
-        disabled={!conversation} value={draft} maxLength={65536}
+        disabled={!conversation || conversation.archived} value={draft} maxLength={65536}
         onChange={e => { drafts.set(state.selected, e.target.value); setDraft(e.target.value); }}
         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.nativeEvent.isComposing) { e.preventDefault(); if (!state.busy && !pending && state.connected) void submit(); } }} />
-      <div className="composer-bottom"><span>{state.connected ? 'Text conversation' : 'Connect a gateway to send'} <span className="muted">/ Ctrl+Enter</span></span>
+      {!!state.attachments.length && <div className="attachment-list">{state.attachments.map(m => <span key={m.id}>{m.name} / {m.modality}
+        <button aria-label={`Remove attachment ${m.name}`} onClick={() => void send({ type: 'removeAttachment', id: m.id })} type="button">Remove</button></span>)}</div>}
+      <div className="composer-bottom"><span>{state.connected ? `${state.project.maxTokens} output tokens / ${state.capabilities?.promptBytes.toLocaleString()} prompt bytes` : 'Connect a gateway to send'} <span className="muted">/ Ctrl+Enter</span></span>
+        {state.connected && state.capabilities?.features.private_media && state.capabilities.uploadBytes > 0 && state.capabilities.models.find(m => m.id === state.project.model)?.input.some(i => i === 'image' || i === 'audio') &&
+          <button type="button" disabled={state.busy || state.uploading || state.attachments.length >= 8} onClick={() => void send({ type: 'uploadMedia' })}>{state.uploading ? 'Uploading...' : 'Attach media'}</button>}
         <button className="primary" type="submit" disabled={!state.connected || state.busy || !draft.trim() || !conversation || pending || !state.saved}>Send message</button></div>
     </form>
   </div>;
