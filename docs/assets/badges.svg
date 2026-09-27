@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 30" role="img" aria-label="Apache 2.0, version 0.1.0 unreleased, Linux x86-64, AOTX gateway">
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<g font-family="Arial,sans-serif" font-size="12" text-anchor="middle">
+<g transform="translate(0,0)"><path d="M0 0h176v30H0z" fill="#49555f"/><path d="M70 0h106v30H70z" fill="#e58b24"/><text x="35" y="20" fill="#fff">License</text><text x="123.0" y="20" fill="#18222b">Apache-2.0</text></g>
+<g transform="translate(184,0)"><path d="M0 0h230v30H0z" fill="#49555f"/><path d="M70 0h160v30H70z" fill="#e58b24"/><text x="35" y="20" fill="#fff">Version</text><text x="150.0" y="20" fill="#18222b">0.1.0 / unreleased</text></g>
+<g transform="translate(422,0)"><path d="M0 0h190v30H0z" fill="#49555f"/><path d="M70 0h120v30H70z" fill="#e58b24"/><text x="35" y="20" fill="#fff">Platform</text><text x="130.0" y="20" fill="#18222b">Linux x86-64</text></g>
+<g transform="translate(620,0)"><path d="M0 0h160v30H0z" fill="#49555f"/><path d="M70 0h90v30H70z" fill="#e58b24"/><text x="35" y="20" fill="#fff">Backend</text><text x="115.0" y="20" fill="#18222b">AOTX</text></g>
+</g></svg>

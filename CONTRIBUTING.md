@@ -16,7 +16,7 @@ Preserve third-party licenses and notices.
 
 ## Checks and review
 
-Run these commands before a commit:
+For code changes, run these commands before a commit:
 
 ```sh
 npm run check
@@ -29,6 +29,10 @@ git diff --cached --check
 The hosted `Repository checks` job runs for each branch push and pull requests to master.
 It checks source size, license identifiers, common secret patterns and version
 metadata. It also builds the application and runs focused tests. A passing job does not establish application acceptance.
+
+For documentation-only changes, run source gates, check relative links and inspect
+the rendered pages. Reuse unchanged runtime acceptance. The hosted job still runs
+its configured checks. See [testing](docs/testing.md) for each check's scope.
 
 Add focused tests with application features. Test the complete affected workflow.
 Run visible desktop checks for interface changes.

@@ -1,45 +1,67 @@
-<p align="center"><img src="public/prism-rendered.png" width="112" alt="AOTX-PRISM" /></p>
-<h1 align="center">AOTX-PRISM</h1>
-<p align="center">Project Runtime Interface and Session Manager</p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/header-dark.png">
+    <img src="docs/assets/header.png" width="720" alt="AOTX-PRISM. A seated silver-blue-haired operator beside the product title.">
+  </picture>
+</p>
 
----
+<p align="center">A desktop workspace for AOTX conversations and persistent CCIR runtimes.</p>
 
-AOTX-PRISM is a desktop workspace for AOTX. Connect an existing gateway, open a
-project folder and hold ordinary model conversations. Move, resize and dock
-utility windows without closing the conversation.
-Use complete CCIR files for persistent shared spaces and conversations.
+<p align="center"><img src="docs/assets/badges.svg" width="720" alt="Apache 2.0 | Version 0.1.0, unreleased | Linux x86-64 | AOTX gateway"></p>
 
-The development version is **0.1.0**. Source builds and local Linux packaging
-are available. No version tag or application release is published.
+<p align="center">
+  <a href="docs/install.md">Install</a> |
+  <a href="docs/first-use.md">Start</a> |
+  <a href="docs/shared.md">CCIR</a> |
+  <a href="docs/README.md">Documentation</a>
+</p>
 
-## Current capabilities
+<p align="center"><img src="docs/assets/divider.svg" width="720" alt=""></p>
 
-| Workflow | Support |
+AOTX-PRISM brings conversations, project history, runtime setup and memory evidence
+into one desktop application. Connect an existing AOTX gateway or start a local
+installation. Choose ordinary conversations or persistent CCIR spaces, with explicit
+instructions for each new conversation.
+
+The interface uses silver panel headers, a restrained amber accent and dockable
+windows. A graphite theme provides the same layout on dark surfaces. Fonts and
+application assets are local.
+
+**Version 0.1.0 is unreleased.** Source builds and local Linux packages are available.
+No application release or version tag is published. See [changes](CHANGELOG.md)
+and [support boundaries](docs/support.md).
+
+## Capabilities
+
+| Area | Current behavior |
 | --- | --- |
-| Project folders | Local history, names, archive, export and nested read-only previews |
-| Conversation setup | Neutral or custom instructions for each new conversation |
-| Affect | Qualified model controls and permitted runtime settings |
-| Runtime setup | Checked local launch, GPU selection and saved machine profiles |
-| Gateway connection | Bearer authentication, model discovery and capability display |
-| Conversations | Text and advertised JPEG/WAV input, incremental output and exact cancellation |
-| Generation profiles | Saved settings bound to an exact model digest |
-| Recovery | Read a known request again without sending its prompt again |
-| Shared CCIR | Create, inspect, activate, save, copy and restore complete shared files |
-| Persistent conversations | Participant membership, scoped spaces, ordered events and exact request recovery |
-| Workspace | Docked or floating panels, saved layout, silver and graphite themes |
-| Evidence and controls | Typed memory, exact references, qualified doses and policy actions |
-| Activity window | Background counters, conversation event pages and an optional rain field |
+| Conversations | Text, advertised JPEG/WAV input, incremental output and exact cancellation. |
+| Conversation setup | Editable neutral instructions for new ordinary and CCIR conversations. |
+| Projects | Local history, conversation names, archives, JSON exports and read-only file previews. |
+| Runtime setup | Installation checks, GPU selection, saved profiles and owned process shutdown. |
+| Shared CCIR | Complete file creation, verification, activation, saved shutdown and stopped-file copies. |
+| Persistent spaces | Participant membership, scoped conversations, ordered events and exact request recovery. |
+| Affect and controls | Qualified model controls, permitted runtime settings and scoped state readback. |
+| Evidence and activity | Typed memory, source references, explicit publication, policy counters and controls. |
+| Workspace | Floating or docked panels, resizing, maximize/restore and saved layout. |
 
-Model-driven file changes and command execution are outside the first release.
+Project folders do not grant model file access. Model-driven file edits and command
+execution are outside this version. AOTX owns inference and persistent memory;
+PRISM displays the interfaces advertised by the connected gateway.
 
-Read [first use](docs/first-use.md) for workflow choices, keyboard controls and recovery.
-See [Linux installation](docs/install.md) for packages, upgrades and removal.
+<p align="center"><img src="docs/assets/divider.svg" width="720" alt=""></p>
 
-## Build and start
+## Install or build
 
-Use Linux with a graphical desktop, Node.js 22.16 or later, npm and Python 3.12
-or later. The source build has been exercised on Linux x86-64. Other platforms
-are not qualified. An AOTX gateway is required for inference.
+The desktop target is Linux x86-64. A packaged installation includes Electron and
+does not require Node.js. It still requires a graphical session, system desktop
+libraries, a working Chromium sandbox and Python for installation.
+
+For a supplied package, follow [Linux installation](docs/install.md).
+AOTX executables, model files and gateway dependencies are separate installations.
+PRISM does not download them. An external gateway can run inference on another machine.
+
+For a source checkout, use Node.js 22.16 or later, npm and Python 3.12 or later:
 
 ```sh
 npm ci
@@ -47,85 +69,80 @@ npm run build
 npm start
 ```
 
-Dependency versions are pinned in `package-lock.json`. Installation downloads the
-pinned Electron runtime. The application bundles its fonts and interface assets.
-No account or external web content is required to open the workspace.
+Run these commands from the repository root. Source builds need the same desktop
+libraries and sandbox support as installed packages.
 
-## First conversation
+## Start a conversation
 
-1. Open **Project** from the menu.
-2. Enter an existing folder path, or use **Browse folders**.
-3. Select **Open project**. PRISM creates private metadata in `.prism`.
-4. Open **Connection**. Enter the gateway URL and bearer token.
-5. Select **Connect**. Open **Models** to inspect or change the generation settings.
-6. Select **New conversation**, enter a message and select **Send message**.
+1. Open **Project** and select an existing folder for local history.
+2. Open **Connection** and enter the gateway URL and bearer token.
+3. Select **Connect**.
+4. Open **Models**, select an advertised model and apply generation settings.
+5. Select **+ New conversation**.
+6. Set a name and review the neutral system prompt.
+7. Select **Create conversation**, enter a message and select **Send message**.
 
-The application starts with a local workspace under its desktop data directory.
-Reopen a project folder to restore its conversations. A bearer token is not
-stored with the project. Connect again after an application restart.
+Use HTTPS for a remote gateway, or HTTP through a loopback SSH tunnel.
+The bearer token stays in process memory. Enter it again after restarting PRISM.
 
-Use **Runtime setup** to start an installed local runtime instead of entering
-an external gateway. See [runtime and project setup](docs/setup.md) for the full flow.
-See [shared CCIR workspaces](docs/shared.md) for persistent conversations and complete files.
+[First use](docs/first-use.md) covers the full procedure.
+[Runtime setup](docs/setup.md) covers starting an installed local backend.
 
-Use **Windows** to open a panel. Drag its tab to move it. Use **Float** or **Dock**
-for explicit placement. Drag a window edge or divider to resize it.
+## Use persistent CCIR conversations
 
-**Maximize** expands a panel. **Restore** returns to its previous layout.
+Connect a complete shared runtime, then open **CCIR workspace**. Register the
+participant, select a space and create a conversation. **New CCIR conversation**
+opens the same prompt editor with the runtime's supported byte limit.
 
-**Reset layout** restores the conversation view. Closing a panel does not cancel
-its device request. The optional system folder picker is the only modal selector.
+CCIR instructions remain fixed for that conversation. Runtime memory rules and
+authenticated actor context still apply. Existing conversations retain their
+original instructions; a new default does not rewrite them.
 
-The activity window opens with status tiles. Select **Show visualization** to open
-its rain field. Memory evidence, qualified controls and policy actions use the
-existing gateway. Read [evidence and activity](docs/evidence.md) for their limits.
-See [interface structure](docs/interface.md) for themes and panels.
+A local history entry, completed response and saved CCIR result are different
+states. Inspect the save receipt before relying on recovery. Stop a writer before
+copying its complete file. See [shared workspaces](docs/shared.md).
 
-## Storage and request state
+<p align="center"><img src="docs/assets/divider.svg" width="720" alt=""></p>
 
-Project history is stored in `.prism/project.sqlite3`. Project files are not sent
-to the model. Text previews are read-only and exclude hidden files and links.
-Close PRISM before copying a project database for backup.
+## Documentation
 
-Local history and device execution have separate states. **Completed** reports a
-terminal device result. The footer reports whether history was saved locally.
-If output reading stops, reconnect to the same gateway and select **Read result**.
-PRISM does not send a prompt again after an uncertain admission.
+The [manual index](docs/README.md) provides a reading order and shared terms.
 
-**Cancel request** sends cancellation for the exact request handle. A final device
-state confirms the result. Disconnecting stops reads without canceling device work.
-Exiting PRISM stops its owned runtime and leaves external runtimes running.
-A runtime restart can expire ordinary request handles; local
-history remains available.
-
-See [connection and storage details](docs/architecture.md) for limits and boundaries.
+| Task | Guide |
+| --- | --- |
+| Install, upgrade or remove PRISM | [Installation](docs/install.md) |
+| Choose a project and send the first message | [First use](docs/first-use.md) |
+| Manage folders, history, exports and media | [Projects and files](docs/projects.md) |
+| Select a GPU, runtime or generation profile | [Runtime setup](docs/setup.md) |
+| Save and restore persistent work | [Shared CCIR](docs/shared.md) |
+| Configure controls and runtime affect | [Affect and model controls](docs/controls.md) |
+| Inspect sources and background work | [Evidence and activity](docs/evidence.md) |
+| Recover a failed connection or request | [Troubleshooting](docs/troubleshooting.md) |
+| Understand data and permission boundaries | [Architecture](docs/architecture.md) and [security](docs/security.md) |
 
 ## Development
 
-```sh
-npm run check
-npm run test:desktop
-node --import tsx tests/setup-desktop.mjs
-node --import tsx tests/shared-desktop.mjs
-node --import tsx tests/evidence-desktop.mjs
-git diff --check
+Use the locked dependencies. Run checks appropriate to the changed surface;
+[testing](docs/testing.md) distinguishes source, protocol, visible desktop and
+native runtime checks. [Contribution rules](CONTRIBUTING.md) describe branches,
+review and pull requests.
+
+<details>
+<summary>Source layout</summary>
+
+```text
+src/        React views, Dockview layout and local styles
+desktop/    gateway adapters, project storage and runtime supervision
+shared/     typed commands, bounded data and protocol validation
+public/     application marks, fonts and font licenses
+docs/       user guides, reference and documentation artwork
+tests/      protocol, storage, lifecycle, package and desktop checks
+tools/      source gates and committed-source package builder
+packaging/  package verification, per-user installer and launcher
 ```
 
-The desktop test requires a visible graphical session. It uses an isolated project
-and a local HTTP fixture. It does not claim GPU inference acceptance.
+</details>
 
-| Path | Responsibility |
-| --- | --- |
-| `src/` | React views, Dockview layout and local styles |
-| `desktop/` | Sandboxed application boundary, gateway transport and project storage |
-| `shared/` | Typed commands and bounded project data |
-| `tests/` | Protocol, storage, lifecycle and visible desktop checks |
-| `tools/` | Source and version checks |
+<p align="center"><img src="docs/assets/divider.svg" width="720" alt=""></p>
 
-See [contribution rules](CONTRIBUTING.md), [version rules](docs/versioning.md) and
-[changes](CHANGELOG.md). The client uses existing AOTX interfaces.
-
-## License
-
-The source uses the [Apache License 2.0](LICENSE). Bundled fonts use the SIL Open
-Font License. See [NOTICE](NOTICE) and [dependency notices](docs/dependencies.md).
+<p align="center">Apache License, Version 2.0. See <a href="LICENSE">LICENSE</a>, <a href="NOTICE">NOTICE</a> and <a href="docs/dependencies.md">dependency notices</a>.</p>

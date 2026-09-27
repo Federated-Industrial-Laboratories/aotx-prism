@@ -1,4 +1,8 @@
-# Connection and storage
+# Architecture and storage
+
+[Documentation](README.md) | [Security](security.md) | [Client support](support.md)
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
 
 PRISM separates the reusable web interface from desktop operations. React views
 receive typed commands and state snapshots through a sandboxed preload boundary.
@@ -7,7 +11,8 @@ The desktop process owns gateway credentials and project database transactions.
 
 ## Gateway contract
 
-The client targets AOTX 0.3.5. Its ordinary inference routes are:
+The client targets AOTX 0.3.5 and discovers optional features through capabilities.
+Its inference and runtime-control routes are:
 
 | Route | Use |
 | --- | --- |
@@ -42,7 +47,7 @@ Shared retries preserve the original body. They do not use ordinary retry rules.
 See [shared workspaces](shared.md) for scopes, receipts, storage limits and stopped-file recovery.
 
 Byte cursors, request identities and epochs are checked before output is applied.
-The client retains raw bytes across UTF-8 boundaries and drains all terminal
+The client retains raw bytes across UTF-8 boundaries and drains all final output
 windows before reporting completion. A save failure stops new submissions.
 
 ## Local files
@@ -92,8 +97,13 @@ The runtime adapter uses fixed executable names and argument arrays. A child
 supervisor owns the launched process groups. It stops them on explicit shutdown
 or lost desktop IPC. External gateways have no process ownership controls.
 Local runtime profiles and recent folders are stored separately from projects.
-See [setup](setup.md) for lifecycle, media and project migration behavior.
+See [runtime setup](setup.md) for process lifecycle and [projects](projects.md)
+for media, history and migration behavior.
 
 Electron supplies the desktop host. React and Dockview implement the web views.
 A future host can implement the same typed bridge. Additional gateway features
 can use separate adapters without changing ordinary conversation storage.
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
+
+[Documentation index](README.md) | [Project README](../README.md)
