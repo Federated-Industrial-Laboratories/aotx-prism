@@ -23,7 +23,7 @@ else {
       if (url.hostname !== 'app' || url.search || url.hash || pathname.includes('..') || pathname.includes('\\'))
         return new Response('', { status: 403 });
       const file = join(root, 'dist', pathname === '/' ? 'index.html' : pathname);
-      if (!['.html', '.js', '.css', '.svg', '.woff2', '.ttf'].includes(extname(file))) return new Response('', { status: 403 });
+      if (!['.html', '.js', '.css', '.svg', '.png', '.woff2', '.ttf'].includes(extname(file))) return new Response('', { status: 403 });
       return net.fetch(pathToFileURL(file).href);
     });
     session.defaultSession.setPermissionRequestHandler((_web, _permission, callback) => callback(false));

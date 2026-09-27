@@ -17,7 +17,7 @@ const env = { ...process.env, PRISM_STATE_DIR: join(temporary, 'desktop') }; del
 async function launch() {
   app = await electron.launch({ executablePath: resolve('node_modules/electron/dist/electron'), args: ['.'], env });
   const page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
-  await page.getByText('A clear place to begin', { exact: true }).waitFor(); return page;
+  await page.getByText('Conversation workspace', { exact: true }).waitFor(); return page;
 }
 async function check(name, fn) { await fn(); checks.push(name); console.log(`PASS ${name}`); }
 try {
@@ -30,6 +30,8 @@ try {
     assert.equal(await page.locator('[data-panel="activity"]').count(), 0);
     assert.equal(await page.locator('dialog, [aria-modal="true"]').count(), 0);
     assert.ok(await page.locator('.brand img').evaluate(image => image.complete && image.naturalWidth > 0));
+    assert.equal(await page.getByRole('heading', { name: 'Connect to AOTX', exact: true }).count(), 1);
+    assert.equal(await page.locator('.shell-cap').getAttribute('aria-hidden'), 'true');
   });
   await check('open project folder and local file preview', async () => {
     await page.getByRole('button', { name: 'Project', exact: true }).click();
@@ -57,6 +59,13 @@ try {
     assert.ok(Math.abs(after.width - before.width) > 20);
     await page.getByRole('button', { name: 'Float connection', exact: true }).click();
     assert.equal(await page.locator('.dv-resize-container [data-panel="connection"]').count(), 1);
+    await page.getByLabel('Gateway URL', { exact: true }).fill(server.url);
+    await page.getByLabel('Bearer token', { exact: true }).fill(token);
+    await page.getByRole('button', { name: 'Maximize connection', exact: true }).click();
+    await page.getByRole('button', { name: 'Restore connection', exact: true }).click();
+    assert.equal(await page.getByLabel('Gateway URL', { exact: true }).inputValue(), server.url);
+    assert.equal(await page.getByLabel('Bearer token', { exact: true }).inputValue(), token);
+    assert.equal(await page.getByLabel('Message', { exact: true }).inputValue(), 'Hello from the desktop.');
   });
   await check('real IPC and HTTP conversation completes and saves', async () => {
     await page.getByLabel('Gateway URL', { exact: true }).fill(server.url);
@@ -76,7 +85,22 @@ try {
     await page.getByRole('button', { name: 'Windows', exact: true }).click();
     await page.getByRole('button', { name: 'Activity', exact: true }).click();
     await page.getByText('Runtime activity', { exact: true }).waitFor();
+    assert.equal(await page.locator('canvas').count(), 0);
+    assert.equal(await page.locator('.activity-tile').count(), 3);
+    await page.getByRole('button', { name: 'Show visualization', exact: true }).click();
+    assert.equal(await page.locator('canvas').count(), 1);
+    const before = await page.locator('[data-panel="activity"]').boundingBox();
+    await page.getByRole('button', { name: 'Maximize activity', exact: true }).click();
+    await page.getByRole('button', { name: 'Restore activity', exact: true }).waitFor();
+    const larger = await page.locator('[data-panel="activity"]').boundingBox();
+    assert.ok(larger.width > before.width + 100);
     if (output) await page.screenshot({ path: join(output, 'activity-graphite.png') });
+    await page.getByRole('button', { name: 'Restore activity', exact: true }).click();
+    const restored = await page.locator('[data-panel="activity"]').boundingBox();
+    assert.ok(Math.abs(restored.width - before.width) < 2);
+    assert.equal(await page.locator('.dv-resize-container [data-panel="activity"]').count(), 1);
+    await page.getByRole('button', { name: 'Hide visualization', exact: true }).click();
+    assert.equal(await page.locator('canvas').count(), 0);
     await page.getByRole('button', { name: 'Close activity', exact: true }).click();
     assert.equal(await page.locator('canvas').count(), 0);
   });
@@ -89,6 +113,11 @@ try {
     await page.locator('.phase-completed').waitFor();
     assert.equal(await page.locator('.assistant-message pre').innerText(), server.bytes.toString());
     assert.equal(await page.getByLabel('Theme', { exact: true }).inputValue(), 'graphite');
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(860, 620));
+    await page.getByLabel('Message', { exact: true }).fill('A draft in the minimum window size.');
+    const composer = await page.getByRole('button', { name: 'Send message', exact: true }).boundingBox();
+    assert.ok(composer && composer.y >= 0 && composer.y + composer.height <= (await page.evaluate(() => innerHeight)));
+    if (output) await page.screenshot({ path: join(output, 'minimum-graphite.png') });
     const database = readFileSync(join(project, '.prism/project.sqlite3'));
     assert.ok(!database.includes(Buffer.from(token)));
   });
