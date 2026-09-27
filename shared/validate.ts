@@ -3,6 +3,8 @@
 import type { Command, Project, Turn } from './types.js';
 import { setupCommand } from './setup.js';
 import { sharedCommand } from './shared.js';
+import { evidenceCommand } from './evidence.js';
+import { choice } from './controls.js';
 import { ccirCommand } from './ccir.js';
 export const MAX_PROJECT = 16 * 1024 * 1024;
 export const MAX_OUTPUT = 1024 * 1024;
@@ -67,6 +69,7 @@ function validateTurn(value: unknown): void {
   if (!ID.test(text(row.id, 36)) || !PHASES.has(text(row.phase, 20))) throw Error('Invalid turn identity or state.');
   text(row.prompt, 65536); text(row.model, 256); endpoint(row.endpoint);
   text(row.reply, MAX_OUTPUT, true); text(row.error, 1024, true); text(row.created, 40);
+  if (row.control !== undefined) choice(row.control);
   if (row.media !== undefined) {
     if (!Array.isArray(row.media) || row.media.length > 8) throw Error('Invalid attachment count.');
     for (const item of row.media) {
@@ -100,6 +103,7 @@ export function command(value: unknown): Command {
   const setup = setupCommand(row); if (setup) return setup;
   const shared = sharedCommand(row); if (shared) return shared;
   const ccir = ccirCommand(row); if (ccir) return ccir;
+  const evidence = evidenceCommand(row); if (evidence) return evidence;
   switch (type) {
     case 'state': case 'chooseFolder': case 'disconnect': case 'uploadMedia': case 'listMedia': break;
     case 'files': relativePath(row.path ?? '', true); break;

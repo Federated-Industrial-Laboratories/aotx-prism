@@ -73,7 +73,9 @@ for explicit placement. Drag a window edge or divider to resize it.
 its device request. The optional system folder picker is the only modal selector.
 
 The activity window opens with status tiles. Select **Show visualization** to open
-its rain field. See [interface structure](docs/interface.md) for themes and panels.
+its rain field. Memory evidence, qualified controls and policy actions use the
+existing gateway. Read [evidence and activity](docs/evidence.md) for their limits.
+See [interface structure](docs/interface.md) for themes and panels.
 
 ## Storage and request state
 
@@ -101,6 +103,7 @@ npm run check
 npm run test:desktop
 node --import tsx tests/setup-desktop.mjs
 node --import tsx tests/shared-desktop.mjs
+node --import tsx tests/evidence-desktop.mjs
 git diff --check
 ```
 

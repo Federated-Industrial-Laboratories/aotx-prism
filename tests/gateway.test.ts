@@ -12,7 +12,7 @@ test('endpoint policy and scaled model control doses', () => {
   assert.equal(endpoint('http://127.0.0.1:1234/'), 'http://127.0.0.1:1234');
   for (const url of ['file:///tmp/app', 'http://example.com', 'https://user:pass@example.com', 'https://example.com?token=x']) assert.throws(() => endpoint(url));
   const copy = structuredClone(caps) as any;
-  copy.models[0].controls = [{ name: 'curiosity', available: true, accepted_doses: [-10000, 10000] }];
+  copy.models[0].controls = [{ schema: 'aotx.control.v1', kind: 'residual_vector', positions: 'response', hook: 1, layers: [1, 2], dose_scale: 10000, combinations: false, qualification_sha256: 'a'.repeat(64), name: 'curiosity', available: true, accepted_doses: [-10000, 10000] }];
   assert.deepEqual(capabilities(copy).models[0].controls[0].accepted_doses, [-10000, 10000]);
 });
 test('terminal windows drain fully and preserve split UTF-8', () => {

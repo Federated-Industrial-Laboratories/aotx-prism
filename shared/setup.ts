@@ -4,7 +4,7 @@ import { object, text, number } from './validate.js';
 export interface RuntimeProfile {
   name: string; build: string; gateway: string; python: string; models: string;
   modules: string; folder: string; gpu: string; role: 'language' | 'language-q4' | 'language-audio';
-  ccir?: string; participant?: string;
+  ccir?: string; participant?: string; policyManage?: boolean;
 }
 export interface RuntimeState {
   phase: 'stopped' | 'starting' | 'ready' | 'stopping' | 'failed';
@@ -35,12 +35,13 @@ export function runtimeProfile(value: unknown): RuntimeProfile {
   if (!['language', 'language-q4', 'language-audio'].includes(role)) throw Error('Select an inference role.');
   const gpu = text(p.gpu, 80);
   if (!/^GPU-[a-fA-F0-9-]{36}$/.test(gpu)) throw Error('Select a GPU UUID from the device list.');
+  if (p.policyManage !== undefined && typeof p.policyManage !== 'boolean') throw Error('Invalid policy permission.');
   const ccir = p.ccir !== undefined ? path('ccir') : undefined;
   const participant = ccir ? text(p.participant, 32) : undefined;
   if (participant && (!/^[0-9a-f]{32}$/.test(participant) || /^0+$/.test(participant))) throw Error('Select a local participant.');
   return { name: text(p.name, 80), build: path('build'), gateway: path('gateway'), python: path('python'),
     models: ccir ? text(p.models, 2048, true) : path('models'), modules: ccir ? text(p.modules, 2048, true) : path('modules'),
-    folder: path('folder'), gpu, role: role as RuntimeProfile['role'], ...(ccir ? { ccir, participant } : {}) };
+    folder: path('folder'), gpu, ...(p.policyManage === undefined ? {} : { policyManage: p.policyManage as boolean }), role: role as RuntimeProfile['role'], ...(ccir ? { ccir, participant } : {}) };
 }
 export function setupCommand(row: Record<string, unknown>): SetupCommand | undefined {
   switch (row.type) {
@@ -58,4 +59,9 @@ export function gpuRows(output: string): Gpu[] {
     if (!/^GPU-[a-fA-F0-9-]{36}$/.test(uuid)) throw Error('Invalid GPU identity.');
     return { uuid, name: text(name, 256), freeMiB: number(Number(free), 0, 1048576), totalMiB: number(Number(total), 1, 1048576) };
   });
+}
+
+export function runtimeActions(profile: RuntimeProfile): string[] {
+  return ['infer', 'upload', 'telemetry', ...(profile.ccir ? ['shared_read', 'shared_write', 'shared_manage'] : []),
+    ...(profile.policyManage ? ['policy_manage'] : [])];
 }

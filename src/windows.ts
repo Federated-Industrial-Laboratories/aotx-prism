@@ -3,7 +3,7 @@
 import type { AnchoredBox, DockviewApi, SerializedDockview } from 'dockview';
 import { send, snapshot } from './store';
 export const titles = { conversation: 'Conversation', connection: 'Connection', project: 'Project',
-  models: 'Models', files: 'Project files', inspector: 'Request details', activity: 'Activity', runtime: 'Runtime setup', sources: 'Media sources', shared: 'Shared workspace', ccir: 'CCIR files' } as const;
+  models: 'Models', files: 'Project files', inspector: 'Request details', activity: 'Activity', runtime: 'Runtime setup', sources: 'Media sources', shared: 'Shared workspace', ccir: 'CCIR files', evidence: 'Memory evidence' } as const;
 export type PanelId = keyof typeof titles;
 export function validateLayout(raw: string): SerializedDockview {
   if (raw.length > 262144) throw Error('Invalid layout size.');

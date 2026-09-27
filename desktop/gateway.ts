@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Read bounded native gateway messages without retries or credential redirects.
 import { endpoint, object, text, number, HANDLE, MAX_OUTPUT } from '../shared/validate.js';
+import { control } from '../shared/controls.js';
 import type { Capabilities, Model, Turn } from '../shared/types.js';
 export class GatewayError extends Error {
   constructor(message: string, readonly status = 0, readonly handle?: string) { super(message); }
@@ -30,13 +31,7 @@ export function capabilities(value: unknown): Capabilities {
       throw Error('Invalid model capabilities.');
     ids.add(id);
     if (!Array.isArray(m.controls) || m.controls.length > 64) throw Error('Invalid control capabilities.');
-    const controls = m.controls.map(raw => {
-      const c = object(raw);
-      if (typeof c.available !== 'boolean' || !Array.isArray(c.accepted_doses) || c.accepted_doses.length > 64)
-        throw Error('Invalid control capabilities.');
-      return { name: text(c.name, 128), available: c.available,
-        accepted_doses: c.accepted_doses.map(d => number(d, -40000, 40000)) };
-    });
+    const controls = m.controls.map(control);
     return { id, sha256, input: m.input as string[], automatic_memory: m.automatic_memory, controls };
   });
   const flags: Record<string, boolean> = {};
@@ -77,7 +72,7 @@ export function output(value: unknown, turn: Turn): Turn {
 export class Gateway {
   readonly url: string;
   constructor(url: string, private readonly token: string, private readonly request: typeof fetch = fetch) { this.url = endpoint(url); }
-  async json(path: string, signal: AbortSignal, body?: unknown, mime?: string, method?: string): Promise<{ value: unknown; handle?: string }> {
+  async json(path: string, signal: AbortSignal, body?: unknown, mime?: string, method?: string, parse: (raw: string) => unknown = JSON.parse): Promise<{ value: unknown; handle?: string }> {
     let handle: string | undefined;
     try {
       const encoded = body === undefined ? undefined : mime ? body as Buffer : JSON.stringify(body);
@@ -100,7 +95,7 @@ export class Gateway {
         }
       } finally { await reader.cancel().catch(() => {}); }
       if (!response.ok) throw new GatewayError(`Gateway HTTP ${response.status}.`, response.status, handle);
-      return { value: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(pieces))), handle };
+      return { value: parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(pieces))), handle };
     } catch (error) {
       if (error instanceof GatewayError) throw error;
       throw new GatewayError(signal.aborted ? 'Connection closed.' : 'The gateway response could not be verified.', 0, handle);

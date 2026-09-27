@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // Route shared operations through a durable local journal and verify each returned identity.
 import { setTimeout as delay } from 'node:timers/promises';
+import { affect } from '../observation.js';
+import { selection, type ControlChoice } from '../../shared/controls.js';
 import { Gateway, GatewayError } from '../gateway.js';
 import { MutationJournal } from './journal.js';
-import { PREFIX, participant, receipt, resource, page, handle, OutputWindow, type Receipt, type Row } from '../../shared/shared-protocol.js';
+import { PREFIX, participant, receipt, resource, page, handle, rights, OutputWindow, type Receipt, type Row } from '../../shared/shared-protocol.js';
 import { emptyShared, emptyPage, type SharedState, type SharedCommand, type Mutation } from '../../shared/shared.js';
 import type { Capabilities, Media, Project } from '../../shared/types.js';
 const terminal = (r: Receipt) => !['accepted', 'queued', 'running'].includes(r.state);
@@ -156,7 +158,7 @@ export class SharedSession {
     } while (output.cursor !== last.output_bytes);
     this.state.inspected = { receipt: last, text: output.text }; this.emit();
   }
-  async execute(cmd: SharedCommand, project: Project, caps?: Capabilities, attachments: Media[] = []) {
+  async execute(cmd: SharedCommand, project: Project, caps?: Capabilities, attachments: Media[] = [], control?: ControlChoice) {
     this.state.error = '';
     switch (cmd.type) {
       case 'sharedConnect': throw Error('Use the current gateway connection.');
@@ -184,9 +186,18 @@ export class SharedSession {
         if (!model || !model.input.includes('text') || project.maxTokens > caps!.outputTokens) throw Error('Select an available model and output limit.');
         if ((!cmd.text.trim() && !attachments.length) || Buffer.byteLength(cmd.text) + attachments.length * 73 > 2048) throw Error('The shared input exceeds 2,048 bytes or is empty.');
         if (attachments.some(m => m.endpoint !== gateway.url || m.epoch !== caps?.epoch || !model.input.includes(m.modality))) throw Error('These attachments are unavailable for this runtime and model.');
+        const selected = selection(control, control ? await gateway.discover(this.abort.signal) : caps, project.model);
+        if (selected && affect(await this.get(`/conversations/${handle(this.state.selectedConversation, 'con')}/affect`), this.state).enabled) throw Error('Explicit controls require affect to be disabled by the runtime operator.');
         await this.prepare(`/conversations/${handle(this.state.selectedConversation, 'con')}/inputs`, { text: cmd.text, model: project.model,
-          max_output_tokens: project.maxTokens, temperature: project.temperature,
+          ...(selected ? { control: selected } : {}), max_output_tokens: project.maxTokens, temperature: project.temperature,
           ...(attachments.length ? { media: attachments.map(m => ({ type: m.modality, sha256: m.sha256 })) } : {}) }, 'Conversation input'); break;
+      }
+      case 'sharedPublish': {
+        const { person } = this.ready();
+        const destination = handle(cmd.destination, 'spc', person.lineage);
+        const r = resource(await this.get(`/spaces/${destination}`), person.lineage);
+        if (r.id !== destination || !rights(r.permissions).includes('manage')) throw Error('The destination requires management permission.');
+        await this.prepare(`/spaces/${destination}/publish/${cmd.id}`, { source_version: cmd.version }, 'Publish evidence'); break;
       }
       case 'sharedSave': await this.prepare('/save', {}, 'Save runtime'); break;
       case 'sharedRetire': await this.prepare('/retire', { retry_floor: cmd.floor }, 'Retire saved receipts'); break;
