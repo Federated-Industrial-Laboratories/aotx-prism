@@ -51,12 +51,12 @@ def build(output):
         destination = Path(temporary) / name
         destination.mkdir()
         shutil.copytree(electron, destination / 'runtime', ignore=shutil.ignore_patterns('default_app.asar'))
-        app = destination / 'app'
+        app = destination / 'runtime/resources/app'
         app.mkdir()
         for directory in ('dist', 'dist-desktop'):
             shutil.copytree(ROOT / directory, app / directory)
         (app / 'package.json').write_text(json.dumps({key: package[key] for key in ('name', 'version', 'description', 'license', 'type', 'main')}, indent=2) + '\n')
-        for path in ('LICENSE', 'NOTICE', 'README.md', 'CHANGELOG.md', 'VERSION'):
+        for path in ('LICENSE', 'NOTICE', 'README.md', 'CHANGELOG.md', 'VERSION', 'CONTRIBUTING.md'):
             shutil.copyfile(ROOT / path, destination / path)
         shutil.copytree(ROOT / 'docs', destination / 'docs')
         (destination / 'public').mkdir()

@@ -47,7 +47,7 @@ def point(path, target):
 
 def entry(prefix, home):
     launcher = str(prefix / 'bin/aotx-prism')
-    icon = str(home / 'current/app/dist/prism-rendered.png')
+    icon = str(home / 'current/runtime/resources/app/dist/prism-rendered.png')
     escape = lambda value: value.replace('\\', '\\\\').replace('"', '\\"').replace('`', '\\`').replace('$', '\\$').replace('%', '%%')
     return ('[Desktop Entry]\nType=Application\nName=AOTX-PRISM\n'
             'Comment=Project Runtime Interface and Session Manager\n'

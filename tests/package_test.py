@@ -19,8 +19,8 @@ from verify import inventory, verify
 def fixture(root, index):
     package = root / f'package-{index}'
     package.mkdir()
-    for path in ('aotx-prism', 'runtime/electron', 'app/package.json', 'app/dist/index.html',
-                 'app/dist-desktop/desktop/main.js', 'install.py', 'verify.py', 'LICENSE'):
+    for path in ('aotx-prism', 'runtime/electron', 'runtime/resources/app/package.json', 'runtime/resources/app/dist/index.html',
+                 'runtime/resources/app/dist-desktop/desktop/main.js', 'install.py', 'verify.py', 'LICENSE'):
         target = package / path
         target.parent.mkdir(exist_ok=True, parents=True)
         target.write_text(f'Package {index}: {path}')
@@ -45,7 +45,7 @@ class PackageTests(unittest.TestCase):
                     operate('install', source, prefix)
                     current = prefix / 'share/aotx-prism/current'
                     self.assertEqual(verify(current.resolve())['source_commit'], f'{i + 1:040x}')
-                    self.assertEqual((current / 'app/dist/index.html').read_text(), f'Package {i}: app/dist/index.html')
+                    self.assertEqual((current / 'runtime/resources/app/dist/index.html').read_text(), f'Package {i}: runtime/resources/app/dist/index.html')
                     self.assertEqual(len(list((current.parent / 'releases').iterdir())), i + 1)
                     self.assertEqual(os.readlink(prefix / 'bin/aotx-prism'), str(current / 'aotx-prism'))
                 operate('uninstall', source, prefix)

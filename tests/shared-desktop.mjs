@@ -31,7 +31,7 @@ const url = `http://127.0.0.1:${server.address().port}`;
 const env = { ...process.env, PRISM_STATE_DIR: directory }; delete env.ELECTRON_RUN_AS_NODE;
 let app, page;
 async function launch() {
-  app = await electron.launch({ executablePath: resolve('node_modules/electron/dist/electron'), args: ['.'], env });
+  app = await electron.launch({ chromiumSandbox: true, executablePath: resolve('node_modules/electron/dist/electron'), args: ['.'], env });
   page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
   await page.getByRole('button', { name: 'Project', exact: true }).waitFor();
 }

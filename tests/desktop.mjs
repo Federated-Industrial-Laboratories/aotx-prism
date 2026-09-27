@@ -16,7 +16,7 @@ const server = await fixture(), checks = [], errors = [];
 let app;
 const env = { ...process.env, PRISM_STATE_DIR: join(temporary, 'desktop') }; delete env.ELECTRON_RUN_AS_NODE;
 async function launch() {
-  app = await electron.launch({ executablePath: process.env.PRISM_TEST_PACKAGE ? resolve(process.env.PRISM_TEST_PACKAGE, 'runtime/electron') : resolve('node_modules/electron/dist/electron'), args: [process.env.PRISM_TEST_PACKAGE ? resolve(process.env.PRISM_TEST_PACKAGE, 'app') : '.'], env });
+  app = await electron.launch({ chromiumSandbox: true, executablePath: process.env.PRISM_TEST_PACKAGE ? resolve(process.env.PRISM_TEST_PACKAGE, 'runtime/electron') : resolve('node_modules/electron/dist/electron'), args: process.env.PRISM_TEST_PACKAGE ? [] : ['.'], env });
   const page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
   await page.getByText('Conversation workspace', { exact: true }).waitFor(); return page;
 }
@@ -25,6 +25,9 @@ try {
   let page = await launch();
   await check('sandbox and optional activity default', async () => {
     const preferences = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences());
+    assert.equal(await app.evaluate(({app})=>app.commandLine.hasSwitch('no-sandbox')),false);
+    const renderer=await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].webContents.getOSProcessId());
+    assert.match(readFileSync(`/proc/${renderer}/status`,'utf8'),/^Seccomp:\s+2$/m);
     assert.equal(preferences.sandbox, true); assert.equal(preferences.contextIsolation, true);
     assert.equal(preferences.nodeIntegration, false); assert.equal(preferences.webSecurity, true);
     assert.equal(await page.evaluate(() => typeof window.require), 'undefined');

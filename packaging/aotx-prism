@@ -5,4 +5,4 @@
 set -eu
 package=$(dirname -- "$(readlink -f -- "$0")")
 unset ELECTRON_RUN_AS_NODE
-exec "$package/runtime/electron" "$package/app" "$@"
+exec "$package/runtime/electron" "$@"

@@ -41,8 +41,8 @@ def verify(root):
     if not re.fullmatch(r'[0-9a-f]{64}', data.get('lock_sha256', '')):
         raise ValueError('Invalid dependency identity.')
     files = data.get('files', {})
-    required = {'aotx-prism', 'runtime/electron', 'app/package.json', 'app/dist/index.html',
-                'app/dist-desktop/desktop/main.js', 'install.py', 'verify.py', 'LICENSE'}
+    required = {'aotx-prism', 'runtime/electron', 'runtime/resources/app/package.json', 'runtime/resources/app/dist/index.html',
+                'runtime/resources/app/dist-desktop/desktop/main.js', 'install.py', 'verify.py', 'LICENSE'}
     if not required.issubset(files) or files != inventory(root):
         raise ValueError('Package contents do not match the manifest.')
     if files['aotx-prism']['mode'] != 0o755 or files['runtime/electron']['mode'] != 0o755:
