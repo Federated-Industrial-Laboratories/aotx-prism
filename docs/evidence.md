@@ -63,7 +63,9 @@ shared journals retain the complete canonical request.
 ## Observe background work
 
 Open **Windows > Activity** for policy state, completion counters, save generation
-and selected conversation events. Policy work is distinct from foreground input.
+and selected conversation events. Events use a separate page of at most 64 records.
+Use **First event page** or **Next event page** to browse it. Refresh keeps that page.
+Policy work is distinct from foreground input.
 A quiet or unavailable policy does not imply hidden model activity.
 
 Observation refreshes while the panel and application are visible. Closing the

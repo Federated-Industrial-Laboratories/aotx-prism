@@ -36,12 +36,14 @@ for (const count of [1, 64]) test(`decode ${count} distinct source, assertion, a
     assert.equal(decodePayload(queue, 11).references[0].version, String(i + 7));
   }
 });
-test('unknown formats keep their identity and malformed known layouts never invent text', () => {
-  const b = source('Saved source'); b.writeUInt32LE(99, 8);
+for (const count of [1, 64]) test(`unknown formats and malformed layouts reject ${count} distinct payloads`, () => {
+  for (let i = 0; i < count; i++) {
+  const text = `Saved source ${i}`, b = source(text); b.writeUInt32LE(99 + i, 8);
   assert.equal(decodePayload(b, 1).state, 'unknown');
-  for (const length of [0, 8, 15, 31, 33]) assert.notEqual(decodePayload(source('Text').subarray(0, length), 1).state, 'known');
-  const appraisal = Buffer.alloc(32); appraisal.writeUInt32LE(1); appraisal.writeUInt32LE(1, 24); appraisal.writeUInt32LE(1000001, 4);
+  for (const length of [0, 8, 15, 31, 33]) assert.notEqual(decodePayload(source(text).subarray(0, length), 1).state, 'known');
+  const appraisal = Buffer.alloc(32); appraisal.writeUInt32LE(1); appraisal.writeUInt32LE(1, 24); appraisal.writeUInt32LE(1000001 + i, 4);
   assert.equal(decodePayload(appraisal, 3).state, 'invalid');
-  const invalid = source('Text'); invalid[32] = 255; assert.equal(decodePayload(invalid, 1).text, undefined);
-  const selection = Buffer.alloc(16); selection.writeUInt32LE(1); selection.writeUInt32LE(65, 4); assert.equal(decodePayload(selection, 10).state, 'invalid');
+  const invalid = source(text); invalid[32] = 255; assert.equal(decodePayload(invalid, 1).text, undefined);
+  const selection = Buffer.alloc(16); selection.writeUInt32LE(1); selection.writeUInt32LE(65 + i, 4); assert.equal(decodePayload(selection, 10).state, 'invalid');
+  }
 });

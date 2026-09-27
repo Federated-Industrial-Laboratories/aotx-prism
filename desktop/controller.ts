@@ -117,9 +117,8 @@ export class Controller {
     switch (cmd.type) {
       case 'evidenceList': await this.observation.memory(this.connected(), this.shared.state, this.abort.signal, undefined, undefined, cmd.cursor); break;
       case 'evidenceRead': await this.observation.memory(this.connected(), this.shared.state, this.abort.signal, cmd.id, cmd.version); break;
-      case 'activityRead':
-        await this.observation.activity(this.connected(), this.shared.state, this.abort.signal);
-        if (this.shared.state.connected && this.shared.state.selectedConversation) await this.shared.list('events', '0'); break;
+      case 'activityRead': case 'activityPage':
+        await this.observation.activity(this.connected(), this.shared.state, this.abort.signal, cmd.type === 'activityPage' ? cmd.cursor : undefined); break;
       case 'policyAction': await this.observation.action(this.connected(), cmd.action, cmd.epoch, cmd.revision, this.abort.signal); break;
       case 'controlSelect':
         this.connected(); selection(cmd.value || undefined, this.state.capabilities, this.state.project.model);

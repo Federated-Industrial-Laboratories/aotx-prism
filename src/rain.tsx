@@ -45,7 +45,7 @@ export function Activity({ visible = true }: { visible?: boolean }) {
     return () => { stopped = true; clearTimeout(timer); document.removeEventListener('visibilitychange', visibility); };
   }, [visible, state.connected, shared.selectedConversation, observing]);
   const active = state.connected && (state.busy || shared.watching.length > 0 || policy?.state === 'active' || policy?.state === 'recording');
-  const symbols = [policy?.counters.completed, policy?.counters.decision, ...shared.events.items.map(row => row.id)].filter(Boolean).join('') || '0';
+  const symbols = [policy?.counters.completed, policy?.counters.decision, ...e.events.items.map(row => row.id)].filter(Boolean).join('') || '0';
   return <div className="form-panel"><span className="eyebrow">RUNTIME / ACTIVITY</span><h2>Runtime activity</h2>
     <p>Reported background processing, conversation events and saved work.</p>
     {e.reading && <p role="status">Refreshing reported state.</p>}
@@ -65,8 +65,11 @@ export function Activity({ visible = true }: { visible?: boolean }) {
           {Object.entries(policy.counters).map(([key, value]) => <div key={key}><dt>{key.replaceAll('_', ' ')}</dt><dd>{value}</dd></div>)}</dl></details></>}
     {e.policyError && <p className="warning">{e.policyError}</p>}
     {e.policyDenied && <p className="footnote">This connection has no policy management permission.</p>}
-    <h3>Conversation events</h3>{shared.events.gap && <p className="warning">The event page has a gap. Earlier events are unavailable.</p>}
-    <div className="activity-events">{shared.events.items.length ? shared.events.items.map(row => <article key={String(row.id)}><b>Input {String(row.input_order)} / {String(row.state)}</b>
+    <h3>Conversation events</h3><p className="footnote">Up to 64 events per page. Refresh keeps this page. Select the next page for later events.</p>
+    <div className="button-row"><button disabled={!shared.connected || !shared.selectedConversation || e.reading} onClick={() => void send({ type: 'activityPage', cursor: '0' })}>First event page</button>
+      <button disabled={!shared.connected || e.reading || e.events.next === '0'} onClick={() => void send({ type: 'activityPage', cursor: e.events.next })}>Next event page</button></div>
+    {e.eventError && <p className="warning">{e.eventError}</p>}{e.events.gap && <p className="warning">The event page has a gap. Earlier events are unavailable.</p>}
+    <div className="activity-events">{e.events.items.length ? e.events.items.map(row => <article key={String(row.id)}><b>Input {String(row.input_order)} / {String(row.state)}</b>
       <span>{String(row.output_bytes)} output bytes / {row.saved_terminal ? 'Result saved' : 'Result not yet saved'}</span><code>{String(row.id)}</code>
       <button disabled={!shared.connected} onClick={() => void send({ type: 'sharedInspect', id: String(row.id) })}>Read event result</button></article>) : <p>No conversation events in the selected page.</p>}</div>
     {shared.inspected && <blockquote className="source-quote">{shared.inspected.text || 'This operation has no text output.'}</blockquote>}

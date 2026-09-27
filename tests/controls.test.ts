@@ -86,13 +86,16 @@ for (const count of [1, 64]) test(`bind ${count} shared controls and publication
     }
   } finally { await session.disconnect(); }
 });
-test('unsupported controls and unadvertised doses cannot become selections', () => {
-  const caps = capabilities(discovery(1)), c = caps.models[0].controls[0];
-  const value = { model: caps.models[0].id, sha256: caps.models[0].sha256, name: c.name, qualification: c.qualification_sha256!, dose: 100 };
+for (const count of [1, 64]) test(`unsupported controls and unadvertised doses reject ${count} distinct selections`, () => {
+  const caps = capabilities(discovery(count));
+  for (let i = 0; i < count; i++) {
+  const model = caps.models[i], c = model.controls[0];
+  const value = { model: model.id, sha256: model.sha256, name: c.name, qualification: c.qualification_sha256!, dose: 100 + i };
   assert.ok(selection(choice(value), caps, value.model));
-  for (const edit of [{ dose: 101 }, { qualification: identity(9000,64) }, { sha256: identity(8000,64) }, { model: 'other' }]) assert.throws(() => selection({ ...value, ...edit }, caps, value.model));
-  for (const edit of [{ schema: 'future' }, { kind: 'future' }, { available: false }, { combinations: true }, { qualification_sha256: identity(0,64) }]) assert.equal(control({ ...advertised(0), ...edit }).available, false);
-  for (const doses of [[0], [1.5], [100,100], [40001]]) assert.throws(() => control({ ...advertised(0), accepted_doses: doses }));
+  for (const edit of [{ dose: 101 + i }, { qualification: identity(9000,64) }, { sha256: identity(8000,64) }, { model: 'other' }]) assert.throws(() => selection({ ...value, ...edit }, caps, value.model));
+  for (const edit of [{ schema: 'future' }, { kind: 'future' }, { available: false }, { combinations: true }, { qualification_sha256: identity(0,64) }]) assert.equal(control({ ...advertised(i), ...edit }).available, false);
+  for (const doses of [[0], [1.5], [100,100], [40001]]) assert.throws(() => control({ ...advertised(i), accepted_doses: doses }));
+  }
 });
 
 for (const count of [1, 64]) test(`grant policy management only to ${count} explicit runtime profile choices`, () => {

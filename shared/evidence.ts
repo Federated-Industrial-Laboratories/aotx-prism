@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Define bounded evidence views, current memory metadata and policy commands.
-import { object, decimal, hex, handle, scope, small, type Scope } from './shared-protocol.js';
+import { object, decimal, hex, handle, scope, small, type Scope, type Page } from './shared-protocol.js';
 import type { Decoded } from './payload.js';
 import { choice, type ControlChoice } from './controls.js';
 export interface MemoryRow { id: string; version: string; kind: number; scope: Scope; owner: string; room: string; bytes: string; source: string; actor: string }
@@ -15,22 +15,25 @@ export interface Policy { epoch: string; control_revision: string; abi: number; 
 export interface Affect { enabled: boolean; revision: string; fast: number[]; slow: number[]; scale: number;
   events: number; actuators: number; spent: number; role: number; model: string | null; probes: string[] }
 export interface EvidenceState {
+  events: Page; eventCursor: string; eventConversation: string; eventError: string;
   reading: boolean; space: string; rows: MemoryRow[]; next: string; detail?: EvidenceDetail; error: string;
   policy?: Policy; policyError: string; policyDenied: boolean; affect?: Affect; affectError: string;
 }
-export const emptyEvidence = (): EvidenceState => ({ reading: false, space: '', rows: [], next: '0', error: '', policyError: '', policyDenied: false, affectError: '' });
+export const emptyEvidence = (): EvidenceState => ({ events: { items: [], next: '0', gap: false, floor: '0' }, eventCursor: '0', eventConversation: '', eventError: '', reading: false, space: '', rows: [], next: '0', error: '', policyError: '', policyDenied: false, affectError: '' });
 export const policyActions = ['pause', 'resume', 'stop', 'review_on', 'review_off'] as const;
 export type PolicyAction = typeof policyActions[number];
 export type EvidenceCommand =
   | { type: 'evidenceList'; cursor: string }
   | { type: 'evidenceRead'; id: string; version?: string }
   | { type: 'activityRead' }
+  | { type: 'activityPage'; cursor: string }
   | { type: 'policyAction'; action: PolicyAction; epoch: string; revision: string }
   | { type: 'controlSelect'; value: ControlChoice | null };
 export function evidenceCommand(r: Record<string, unknown>): EvidenceCommand | undefined {
   switch (r.type) {
     case 'evidenceList': return { type: r.type, cursor: decimal(r.cursor) };
     case 'evidenceRead': return { type: r.type, id: hex(r.id), ...(r.version === undefined ? {} : { version: decimal(r.version) }) };
+    case 'activityPage': return { type: r.type, cursor: decimal(r.cursor) };
     case 'activityRead': return { type: r.type };
     case 'policyAction':
       if (!policyActions.includes(r.action as PolicyAction)) throw Error('Invalid policy action.');

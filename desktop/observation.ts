@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Read bounded current evidence and policy state through the authorized gateway.
 import { Gateway } from './gateway.js';
-import { object, decimal, small, flag, hex, resource, handle, rights, PREFIX } from '../shared/shared-protocol.js';
+import { object, decimal, small, flag, hex, resource, handle, rights, page, PREFIX } from '../shared/shared-protocol.js';
 import { memoryRow, emptyEvidence, type EvidenceState, type Policy, type Affect, type PolicyAction } from '../shared/evidence.js';
 import { decodePayload } from '../shared/payload.js';
 import type { SharedState } from '../shared/shared.js';
@@ -43,7 +43,7 @@ export class Observation {
   constructor(private changed: (state: EvidenceState) => void) {}
   private emit() { this.changed(structuredClone(this.state)); }
   clear() { this.state = emptyEvidence(); this.emit(); }
-  clearMemory() { this.state.space = ''; this.state.rows = []; this.state.next = '0'; this.state.detail = undefined; this.state.affect = undefined; this.state.error = ''; this.emit(); }
+  clearMemory() { this.state.space = ''; this.state.rows = []; this.state.next = '0'; this.state.detail = undefined; this.state.affect = undefined; this.state.events = emptyEvidence().events; this.state.eventCursor = '0'; this.state.eventConversation = ''; this.state.eventError = ''; this.state.error = ''; this.emit(); }
   private scope(shared: SharedState) {
     if (!shared.connected || !shared.person) throw Error('Open the shared workspace first.');
     return { lineage: shared.person.lineage, space: handle(shared.selectedSpace, 'spc', shared.person.lineage) };
@@ -83,15 +83,31 @@ export class Observation {
       throw Error('The evidence read exceeded its page limit.');
     } catch (error) { this.state.detail = undefined; this.state.error = error instanceof Error ? error.message : 'Evidence is unavailable.'; this.emit(); throw error; }
   }
-  async activity(gateway: Gateway, shared: SharedState, signal: AbortSignal) {
+  async activity(gateway: Gateway, shared: SharedState, signal: AbortSignal, cursor?: string) {
     this.state.reading = true; this.state.policyError = ''; this.state.affectError = ''; this.emit();
     if (!shared.connected || !shared.selectedConversation) this.state.affect = undefined;
-    const checks = [this.readPolicy(gateway, signal)];
+    const checks = [this.readPolicy(gateway, signal), this.readEvents(gateway, shared, signal, cursor)];
     if (shared.connected && shared.selectedConversation) checks.push((async () => {
       try { this.state.affect = affect((await gateway.json(`${PREFIX}/conversations/${handle(shared.selectedConversation, 'con')}/affect`, signal)).value, shared); }
       catch (error) { this.state.affect = undefined; this.state.affectError = error instanceof Error ? error.message : 'Affect is unavailable.'; }
     })());
     await Promise.all(checks); this.state.reading = false; this.emit();
+  }
+  private async readEvents(gateway: Gateway, shared: SharedState, signal: AbortSignal, cursor?: string) {
+    if (!shared.connected || !shared.person || !shared.selectedConversation) {
+      this.state.events = emptyEvidence().events; this.state.eventConversation = ''; this.state.eventCursor = '0'; this.state.eventError = ''; return;
+    }
+    const conversation = handle(shared.selectedConversation, 'con', shared.person.lineage);
+    const selected = decimal(cursor ?? (conversation === this.state.eventConversation ? this.state.eventCursor : '0'));
+    this.state.eventConversation = conversation; this.state.eventCursor = selected; this.state.eventError = '';
+    try {
+      const raw = (await gateway.json(`${PREFIX}/conversations/${conversation}/events?cursor=${selected}&limit=64`, signal)).value;
+      const resourceRow = resource(raw, shared.person.lineage), result = page(raw, 'events', shared.person.lineage);
+      if (resourceRow.space !== shared.selectedSpace || result.items.length > 64 ||
+          (result.next !== '0' && BigInt(result.next) <= BigInt(selected))) throw Error('Invalid activity event page.');
+      if (!result.items.length || (resourceRow.next_order !== undefined && BigInt(result.next) >= BigInt(decimal(resourceRow.next_order)))) result.next = '0';
+      this.state.events = result;
+    } catch (error) { this.state.events = emptyEvidence().events; this.state.eventError = error instanceof Error ? error.message : 'Conversation events are unavailable.'; }
   }
   private async readPolicy(gateway: Gateway, signal: AbortSignal) {
     try { this.state.policy = policy((await gateway.json('/aotx/v1/policy', signal, undefined, undefined, undefined, policyJson)).value); }

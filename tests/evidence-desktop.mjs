@@ -25,6 +25,7 @@ bytes.write('AOTXMEM1'); bytes.writeUInt32LE(1,8); bytes.writeUInt32LE(bytes.len
 const assessment = Buffer.alloc(32); assessment.writeUInt32LE(1); assessment.writeUInt32LE(0xffffffff,8); assessment.writeUInt32LE(1,24);
 const payloads = [bytes, assessment, Buffer.from('Future format bytes')];
 const rows = payloads.map((b,i) => ({ id: identity(i + 10), version: String(i+1), kind: [1,3,500][i], scope: 'private', owner: fixture.space.split('-')[2], room: identity(0), bytes: String(b.length), source: identity(0), actor: fixture.actor }));
+const events=Array.from({length:65},(_,i)=>({id:`op-${fixture.lineage}-${identity(700+i)}`,actor:fixture.actor,input_order:String(i+1),sequence:String(i+1),state:i===64?'running':'completed',saved_admission:true,saved_terminal:i!==64,output_bytes:String(i*13),status:200,output_tokens:i+1,finish:1,admission_source:String(i+1),terminal_source:String(i+2),gap:false}));
 const epoch = '18446744073709551610', revision = '9007199254740997';
 const policy = `{"schema":"aotx.policy.v1","epoch":${epoch},"control_revision":${revision},"abi":3,"mode":1,"state":"active","reason":"active","review_enabled":true,"pending":2,"active_rows":1,"status":0,${['source_frontier','completed','interrupted','refused','decision','saved_generation','maximum_ns','last_ns','written_bytes','result_bytes'].map((k,i)=>`"${k}":${i+10}`).join(',')}}`;
 const server = createServer(async (req,res) => {
@@ -34,6 +35,7 @@ const server = createServer(async (req,res) => {
     const url = new URL(req.url, 'http://localhost'); requests.push({ path: url.pathname, body });
     if (url.pathname.endsWith('/policy')) { res.writeHead(body && !permission ? 403 : 200).end(body && !permission ? '{}' : policy); return; }
     if (url.pathname === '/aotx/v1/capabilities') { res.end(JSON.stringify(discovery)); return; }
+    if (url.pathname.endsWith('/events')) { const start=Math.max(Number(url.searchParams.get('cursor')),1),items=events.filter(r=>Number(r.input_order)>=start).slice(0,64); res.end(JSON.stringify({...fixture.base(),space:fixture.space,items,next_cursor:String(start+items.length),next_order:'66',event_floor:'1',gap:false})); return; }
     if (url.pathname.includes('/memory')) {
       const index = rows.findIndex(r => url.pathname.endsWith(r.id)), detail = index >= 0;
       if (cold && detail) { res.writeHead(503).end('{}'); return; }
@@ -52,7 +54,7 @@ let app, page;
 async function open(label) { await page.getByRole('button',{name:'Windows',exact:true}).click(); await page.locator('.menu-popup').getByRole('button',{name:label,exact:true}).click(); }
 async function check(name,work) { await work(); checks.push(name); console.log(`PASS ${name}`); }
 try {
-  app = await electron.launch({ executablePath:resolve('node_modules/electron/dist/electron'),args:['.'],env });
+  app = await electron.launch({ chromiumSandbox:true, executablePath:resolve('node_modules/electron/dist/electron'),args:['.'],env });
   page = await app.firstWindow(); page.on('pageerror',e=>errors.push(e.message));
   await page.getByRole('button',{name:'Connection',exact:true}).click(); await page.getByLabel('Gateway URL',{exact:true}).fill(url); await page.getByLabel('Bearer token',{exact:true}).fill(token);
   await page.getByRole('button',{name:'Connect',exact:true}).click(); await waitState(page,s=>s.connected); await page.getByRole('button',{name:'Close connection',exact:true}).click();
@@ -77,6 +79,11 @@ try {
   });
   await check('activity preserves exact revisions and disables refused policy actions',async()=>{
     await open('Activity'); await page.getByRole('button',{name:'Maximize activity',exact:true}).click(); await waitState(page,s=>s.evidence.policy?.epoch===epoch);
+    assert.equal(await page.locator('.activity-events article').count(),64);
+    await page.getByRole('button',{name:'Next event page',exact:true}).click(); await waitState(page,s=>s.evidence.eventCursor==='65'&&!s.evidence.reading);
+    await page.getByText('Input 65 / running',{exact:true}).waitFor();
+    assert.equal((await page.evaluate(()=>window.prism.command({type:'state'}))).state.shared.events.items[0].input_order,'1');
+    await page.getByRole('button',{name:'Refresh activity',exact:true}).click(); await waitState(page,s=>!s.evidence.reading&&s.evidence.events.items[0]?.input_order==='65');
     assert.equal(await page.locator('canvas.rain').count(),0); await page.getByText('Policy controls and counters',{exact:true}).click();
     await page.getByRole('button',{name:'Pause background work',exact:true}).click(); await waitState(page,s=>s.evidence.policyDenied);
     const post=requests.find(r=>r.path.endsWith('/policy')&&r.body); assert.ok(post.body.includes(`"epoch":${epoch}`)); assert.ok(post.body.includes(`"control_revision":${revision}`));
@@ -85,12 +92,17 @@ try {
     assert.equal(await page.getByRole('button',{name:'Pause background work',exact:true}).isDisabled(),true);
   });
   await check('optional rain remains readable and polling stops with the panel',async()=>{
+    await page.evaluate(()=>{ window.paintCount=0; const fill=CanvasRenderingContext2D.prototype.fillText; CanvasRenderingContext2D.prototype.fillText=function(...args){window.paintCount++;return fill.apply(this,args);}; });
     await page.getByRole('button',{name:'Show visualization',exact:true}).click(); await page.locator('canvas.rain').waitFor();
     await page.getByLabel('Theme',{exact:true}).selectOption('graphite');
     await page.getByText('Policy controls and counters',{exact:true}).click();
     await page.locator('.panel-activity .form-panel').evaluate(e=>{e.scrollTop=0;});
     if(output) await page.screenshot({path:join(output,'activity-graphite.png')});
-    await page.emulateMedia({reducedMotion:'reduce'}); await page.getByRole('button',{name:'Hide visualization',exact:true}).click(); assert.equal(await page.locator('canvas.rain').count(),0);
+    const moving=await page.evaluate(()=>window.paintCount); await page.waitForTimeout(400); assert.ok(await page.evaluate(()=>window.paintCount)>moving);
+    await page.emulateMedia({reducedMotion:'reduce'}); await page.waitForTimeout(180);
+    const quiet=await page.evaluate(()=>window.paintCount); await page.waitForTimeout(400); assert.equal(await page.evaluate(()=>window.paintCount),quiet);
+    assert.equal(await page.locator('canvas.rain').count(),1);
+    await page.getByRole('button',{name:'Hide visualization',exact:true}).click(); assert.equal(await page.locator('canvas.rain').count(),0);
     await page.getByRole('button',{name:'Close activity',exact:true}).click(); await page.waitForTimeout(300);
     const count=requests.filter(r=>r.path.endsWith('/policy')).length; await page.waitForTimeout(2800);
     assert.equal(requests.filter(r=>r.path.endsWith('/policy')).length,count); assert.equal(fixture.posts.length,1);

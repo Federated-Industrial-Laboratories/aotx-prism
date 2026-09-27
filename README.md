@@ -25,10 +25,9 @@ version tag or application release is published.
 | Shared CCIR | Create, inspect, activate, save, copy and restore complete shared files |
 | Persistent conversations | Participant membership, scoped spaces, ordered events and exact request recovery |
 | Workspace | Docked or floating panels, saved layout, silver and graphite themes |
-| Activity window | Readable request tiles and an optional rain field |
+| Evidence and controls | Typed memory, exact references, qualified doses and policy actions |
+| Activity window | Background counters, conversation event pages and an optional rain field |
 
-Typed shared memory views and qualified control actions are not integrated yet.
-The activity window does not display CCIR background work.
 Model-driven file changes and command execution are outside the first release.
 
 ## Build and start

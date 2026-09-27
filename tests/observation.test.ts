@@ -49,7 +49,11 @@ for (const count of [1, 64]) test(`retain ${count} exact policy revisions and re
     await assert.rejects(observer.action(c.gateway, 'resume', c.epoch, c.revision, signal())); assert.equal(c.posts.length, 2);
   }
 });
-test('policy integers reject rounded, negative, fractional and out-of-range encodings', () => {
-  for (const raw of ['-1', '1.5', '1e3', '18446744073709551616', '"9007199254740993"']) assert.throws(() => policyJson(`{"epoch":${raw}}`));
-  assert.equal((policyJson('{"epoch":18446744073709551615}') as any).epoch, '18446744073709551615');
+for (const count of [1, 64]) test(`policy integers reject ${count} distinct invalid encodings`, () => {
+  for (let i = 0; i < count; i++) {
+    const c = context(i);
+    for (const raw of [String(-1 - i), `${i + 1}.5`, `${i + 1}e3`, String(18446744073709551616n + BigInt(i)), JSON.stringify(c.epoch)])
+      assert.throws(() => policyJson(c.policy.replace(c.epoch, raw)));
+    assert.equal((policyJson(c.policy) as any).epoch, c.epoch);
+  }
 });
