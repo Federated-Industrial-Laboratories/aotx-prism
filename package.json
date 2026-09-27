@@ -17,7 +17,7 @@
     "test:desktop": "node --import tsx tests/desktop.mjs",
     "check": "python3 tools/check_source.py && npm run build && npm test && npm run test:package",
     "package:linux": "python3 tools/package_linux.py",
-    "test:package": "python3 tests/package_test.py"
+    "test:package": "python3 tests/package_test.py && python3 tests/package_inputs_test.py"
   },
   "dependencies": {
     "dockview": "8.3.0",

@@ -55,7 +55,7 @@ Back up projects before changing versions.
 
 Run `python3 install.py uninstall` from an extracted package to remove installation
 files and the desktop entry. All user projects and application state are preserved.
-Uninstall refuses unregistered files inside an installed package.
+Uninstall refuses unregistered files and invalid installation pointers.
 
 Application data normally uses `$XDG_CONFIG_HOME/aotx-prism` or
 `~/.config/aotx-prism`. `PRISM_STATE_DIR` overrides that path when explicitly set.
@@ -68,6 +68,8 @@ Remove personal data separately only after making any required backups.
 From a clean source commit, install the locked dependencies with `npm ci`.
 Run `npm run package:linux`. The command rebuilds both application components
 and writes an archive, a manifest copy and a checksum under `out/`.
+
+The build uses a temporary copy of committed source. Ignored local files are excluded.
 It includes the pinned Electron runtime, local fonts and required dependency notices.
 Development tools, credentials, model files and backend programs are excluded.
 

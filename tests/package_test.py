@@ -110,6 +110,51 @@ class PackageTests(unittest.TestCase):
             self.assertTrue(binary.is_symlink())
 
     @batches
+    def test_unregistered_current_entries_are_preserved(self, index):
+        for defect in ('directory', 'file', 'external', 'traversal', 'wrong-name', 'lock'):
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as temporary, contextlib.redirect_stdout(io.StringIO()):
+                root = Path(temporary)
+                source = fixture(root, index)
+                prefix = root / 'prefix'
+                operate('install', source, prefix)
+                home = prefix / 'share/aotx-prism'
+                current = home / 'current'
+                selected = current.resolve()
+                current.unlink()
+                retained = root / 'retained.txt'
+                retained.write_text(f'Preserve {index}: {defect}')
+                if defect == 'directory':
+                    current.mkdir()
+                    retained = current / 'project.txt'
+                    retained.write_text(f'Preserve {index}: {defect}')
+                elif defect == 'file':
+                    current.write_text(f'Preserve {index}: {defect}')
+                    retained = current
+                elif defect == 'external':
+                    current.symlink_to(selected)
+                elif defect == 'traversal':
+                    current.symlink_to('releases/../releases/' + selected.name)
+                elif defect == 'wrong-name':
+                    renamed = selected.with_name('0.0.0-' + '0' * 12)
+                    selected.rename(renamed)
+                    current.symlink_to('releases/' + renamed.name)
+                else:
+                    current.symlink_to('releases/' + selected.name)
+                    (home / '.lock').unlink()
+                    (home / '.lock').mkdir()
+                    retained = home / '.lock/project.txt'
+                    retained.write_text(f'Preserve {index}: {defect}')
+                desktop = prefix / 'share/applications/aotx-prism.desktop'
+                before = desktop.read_bytes()
+                for action in ('uninstall', 'install'):
+                    with self.assertRaises(ValueError):
+                        operate(action, source, prefix)
+                    self.assertTrue(retained.exists(), 'The unregistered file was removed.')
+                    self.assertEqual(retained.read_text(), f'Preserve {index}: {defect}')
+                    self.assertTrue((prefix / 'bin/aotx-prism').is_symlink())
+                    self.assertEqual(desktop.read_bytes(), before)
+
+    @batches
     def test_linked_parent_is_refused(self, index):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

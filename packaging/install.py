@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import sys
 import tempfile
 sys.dont_write_bytecode = True
@@ -57,6 +58,22 @@ def entry(prefix, home):
             'StartupWMClass=aotx-prism\nX-AOTX-PRISM-Managed=true\n')
 
 
+def current_package(home, required=False):
+    current = home / 'current'
+    if not current.exists() and not current.is_symlink() and not required:
+        return
+    if not current.is_symlink():
+        raise ValueError('The current package pointer is not owned.')
+    target = os.readlink(current)
+    if not re.fullmatch(r'releases/[0-9]+\.[0-9]+\.[0-9]+(?:-rc\.[1-9][0-9]*)?-[0-9a-f]{12}', target):
+        raise ValueError('The current package pointer is not owned.')
+    release = home / target
+    plain(release)
+    data = verify(release)
+    if release.name != data['version'] + '-' + data['source_commit'][:12]:
+        raise ValueError('The current package identity differs.')
+
+
 def operate(action, package, prefix):
     prefix = Path(os.path.abspath(prefix))
     if any(c in str(prefix) for c in '\n\r\t\\%'):
@@ -94,16 +111,21 @@ def operate(action, package, prefix):
         home.mkdir(parents=True, mode=0o755)
         atomic(marker, json.dumps({'schema': MARKER, 'prefix': str(prefix), 'desktop_hashes': allowed}))
     lock_path = home / '.lock'
+    if lock_path.exists() and not stat.S_ISREG(lock_path.lstat().st_mode):
+        raise ValueError('The installation lock is not a regular file.')
     descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     with os.fdopen(descriptor, 'w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        current_package(home, required=action == 'uninstall')
         if action == 'uninstall':
             if {p.name for p in home.iterdir()} - {'installation.json', '.lock', 'releases', 'current'}:
                 raise ValueError('The installation contains unregistered files.')
             releases = home / 'releases'
             plain(releases)
             for release in releases.iterdir():
-                verify(release)
+                installed = verify(release)
+                if release.name != installed['version'] + '-' + installed['source_commit'][:12]:
+                    raise ValueError('An installed package has an unregistered name.')
             binary.unlink(missing_ok=True)
             desktop.unlink(missing_ok=True)
             shutil.rmtree(home)
@@ -126,8 +148,6 @@ def operate(action, package, prefix):
             finally:
                 shutil.rmtree(temporary)
         current = home / 'current'
-        if (current.exists() or current.is_symlink()) and (not current.is_symlink() or not os.readlink(current).startswith('releases/')):
-            raise ValueError('The current package pointer is not owned.')
         binary.parent.mkdir(parents=True, exist_ok=True)
         applications.mkdir(parents=True, exist_ok=True)
         point(current, 'releases/' + name)

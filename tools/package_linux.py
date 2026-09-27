@@ -3,6 +3,7 @@
 # Build a versioned Linux archive from a clean source commit and pinned dependencies.
 # Inputs: output folder. Output: archive, manifest and checksum. Exit: 0 built, 1 failed.
 import argparse
+import io
 import importlib.util
 import json
 import os
@@ -31,15 +32,31 @@ def build(output):
     if git('status', '--porcelain', '--untracked-files=normal'):
         raise ValueError('Commit source changes before packaging.')
     commit = git('rev-parse', 'HEAD')
-    package = json.loads((ROOT / 'package.json').read_text())
+    with tempfile.TemporaryDirectory(prefix='prism-source-') as temporary:
+        source = Path(temporary)
+        snapshot(commit, source)
+        (source / 'node_modules').symlink_to((ROOT / 'node_modules').resolve(), target_is_directory=True)
+        assemble(output, commit, source)
+
+
+def snapshot(commit, destination):
+    content = subprocess.check_output(['git', 'archive', '--format=tar', commit], cwd=ROOT)
+    with tarfile.open(fileobj=io.BytesIO(content)) as archive:
+        for member in archive.getmembers():
+            path = Path(member.name)
+            if path.is_absolute() or '..' in path.parts or not (member.isfile() or member.isdir()):
+                raise ValueError('Source links and special files are not permitted.')
+        archive.extractall(destination, filter='data')
+
+
+def assemble(output, commit, source):
+    package = json.loads((source / 'package.json').read_text())
     version = package['version']
-    lock = json.loads((ROOT / 'package-lock.json').read_text())
+    lock = json.loads((source / 'package-lock.json').read_text())
     electron = ROOT / 'node_modules/electron/dist'
     if (electron / 'version').read_text().strip() != lock['packages']['node_modules/electron']['version']:
         raise ValueError('The Electron runtime differs from the dependency lock.')
-    for directory in ('dist', 'dist-desktop'):
-        shutil.rmtree(ROOT / directory, ignore_errors=True)
-    subprocess.run(['npm', 'run', 'build'], cwd=ROOT, check=True)
+    subprocess.run(['npm', 'run', 'build'], cwd=source, check=True)
     if git('rev-parse', 'HEAD') != commit or git('status', '--porcelain', '--untracked-files=normal'):
         raise ValueError('The source changed during the build.')
     name = f'aotx-prism-{version}-{commit[:12]}-linux-x64'
@@ -54,15 +71,15 @@ def build(output):
         app = destination / 'runtime/resources/app'
         app.mkdir()
         for directory in ('dist', 'dist-desktop'):
-            shutil.copytree(ROOT / directory, app / directory)
+            shutil.copytree(source / directory, app / directory)
         (app / 'package.json').write_text(json.dumps({key: package[key] for key in ('name', 'version', 'description', 'license', 'type', 'main')}, indent=2) + '\n')
         for path in ('LICENSE', 'NOTICE', 'README.md', 'CHANGELOG.md', 'VERSION', 'CONTRIBUTING.md'):
-            shutil.copyfile(ROOT / path, destination / path)
-        shutil.copytree(ROOT / 'docs', destination / 'docs')
+            shutil.copyfile(source / path, destination / path)
+        shutil.copytree(source / 'docs', destination / 'docs')
         (destination / 'public').mkdir()
-        shutil.copyfile(ROOT / 'public/prism-rendered.png', destination / 'public/prism-rendered.png')
+        shutil.copyfile(source / 'public/prism-rendered.png', destination / 'public/prism-rendered.png')
         for path in ('install.py', 'verify.py', 'aotx-prism'):
-            shutil.copyfile(ROOT / 'packaging' / path, destination / path)
+            shutil.copyfile(source / 'packaging' / path, destination / path)
         notices = destination / 'licenses'
         notices.mkdir()
         for dependency in ('react', 'react-dom', 'scheduler', 'dockview', 'dockview-core', 'dockview-react'):
@@ -74,7 +91,7 @@ def build(output):
                 mode = 0o755 if path.name in ('aotx-prism', 'electron', 'chrome-sandbox', 'chrome_crashpad_handler') else 0o644
                 path.chmod(mode)
         manifest = {'schema': 'aotx.prism.package.v1', 'platform': 'linux-x64', 'version': version,
-                    'source_commit': commit, 'lock_sha256': verify_module.digest(ROOT / 'package-lock.json'),
+                    'source_commit': commit, 'lock_sha256': verify_module.digest(source / 'package-lock.json'),
                     'electron': (electron / 'version').read_text().strip(), 'files': verify_module.inventory(destination)}
         (destination / 'manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
         verify_module.verify(destination)
