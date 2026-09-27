@@ -22,7 +22,7 @@ export function validateLayout(raw: string): SerializedDockview {
 }
 class Windows {
   api?: DockviewApi; private restoring = false; private timer?: ReturnType<typeof setTimeout>;
-  private zoom?: { id: PanelId; floating?: AnchoredBox };
+  private zoom?: { id: PanelId; group: string; floating?: AnchoredBox };
   attach(api: DockviewApi) {
     this.api = api; this.restoring = true;
     try { const raw = snapshot().layout; if (raw) api.fromJSON(validateLayout(raw)); else this.reset(); }
@@ -33,6 +33,11 @@ class Windows {
       if (this.restoring) return;
       clearTimeout(this.timer); this.timer = setTimeout(() => this.save(), 250);
     });
+    const settle = () => queueMicrotask(() => {
+      if (this.zoom && !this.restoring && (!api.getPanel(this.zoom.id) || !api.hasMaximizedGroup())) this.restore();
+    });
+    api.onDidRemovePanel(settle);
+    api.onDidMaximizedGroupChange(settle);
   }
   private geometry() {
     const w = this.api?.width || 1000, h = this.api?.height || 700;
@@ -53,18 +58,20 @@ class Windows {
     if (!this.api) return;
     if (this.zoom) { this.restore(); return; }
     const panel = this.api.getPanel(id); if (!panel) return;
+    if (panel.api.isMaximized()) { panel.api.exitMaximized(); this.save(); return; }
     const floating = this.api.toJSON().floatingGroups?.find(group => group.data?.id === panel.group.id)?.position;
     if (panel.api.location.type !== 'grid' && !floating) return;
-    this.zoom = { id, floating }; clearTimeout(this.timer);
+    this.zoom = { id, group: panel.group.id, floating }; clearTimeout(this.timer);
     if (floating) panel.group.api.moveTo({ position: 'right' });
+    this.zoom.group = panel.group.id;
     panel.api.maximize();
   }
   restore() {
     if (!this.api || !this.zoom) return;
     const zoom = this.zoom; this.zoom = undefined; this.restoring = true;
     this.api.exitMaximizedGroup();
-    const panel = this.api.getPanel(zoom.id);
-    if (panel && zoom.floating) this.api.addFloatingGroup(panel.group, { position: zoom.floating,
+    const group = this.api.getPanel(zoom.id)?.group || this.api.groups.find(candidate => candidate.id === zoom.group);
+    if (group && zoom.floating) this.api.addFloatingGroup(group, { position: zoom.floating,
       width: zoom.floating.width, height: zoom.floating.height });
     this.restoring = false; this.save();
   }

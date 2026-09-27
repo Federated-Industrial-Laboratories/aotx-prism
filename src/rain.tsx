@@ -29,7 +29,7 @@ function Rain({ active }: { active: boolean }) {
 }
 
 let showVisual = false;
-export function Activity() {
+export function Activity({ visible = true }: { visible?: boolean }) {
   const { state } = useStore(), [visual, setVisual] = useState(showVisual);
   const turn = state.project.conversations.find(c => c.id === state.selected)?.turns.at(-1);
   return <div className="form-panel"><span className="eyebrow">RUNTIME / ACTIVITY</span><h2>Runtime activity</h2>
@@ -41,7 +41,7 @@ export function Activity() {
     </div>
     <p className="footnote">This connection reports ordinary requests. CCIR background activity is not available in this view.</p>
     <button aria-expanded={visual} onClick={() => { showVisual = !visual; setVisual(showVisual); }}>{visual ? 'Hide visualization' : 'Show visualization'}</button>
-    {visual && <section className="visualisation-panel" aria-label="Request visualization"><div className="message-head"><strong>Request visualization</strong><span>{state.busy ? 'Reading output' : 'Quiet'}</span></div>
+    {visual && visible && <section className="visualisation-panel" aria-label="Request visualization"><div className="message-head"><strong>Request visualization</strong><span>{state.busy ? 'Reading output' : 'Quiet'}</span></div>
       <Rain active={state.connected && state.busy} /><p className="footnote">The field moves while output is read. Read the tiles for request state.</p></section>}
   </div>;
 }
