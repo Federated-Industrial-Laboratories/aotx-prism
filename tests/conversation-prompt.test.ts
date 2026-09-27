@@ -52,6 +52,11 @@ test('new defaults, explicit blank and existing histories keep distinct prompt b
     await assert.rejects(client.run({ type: 'newConversation', title: 'Too large', systemPrompt: 'é'.repeat(2049) }), /4,096/);
     assert.throws(() => systemPrompt('invalid\0prompt'));
     assert.throws(() => systemPrompt(42));
+    for (const invalid of ['\ud800', '\udc00', 'text\ud800suffix', '\udc00\ud800']) {
+      assert.throws(() => systemPrompt(invalid));
+      await assert.rejects(client.run({ type: 'newConversation', title: 'Invalid Unicode', systemPrompt: invalid }));
+    }
+    assert.equal(systemPrompt('Valid \ud83d\ude00 pair'), 'Valid \ud83d\ude00 pair');
     assert.equal(client.state.project.conversations.length, 3);
   } finally { await client.close(); await server.close(); rmSync(root, { recursive: true }); }
 });
