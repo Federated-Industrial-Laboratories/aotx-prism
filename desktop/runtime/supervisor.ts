@@ -9,37 +9,41 @@ import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { inspect } from './inspect.js';
 import { environment } from './process.js';
+import { OwnedGroup } from './group.js';
+import { PrivateLog } from './log.js';
 import { runtimeProfile } from '../../shared/setup.js';
 const children: ChildProcess[] = [];
 const kinds = new Map<ChildProcess, string>();
+const groups = new Map<ChildProcess, OwnedGroup>();
+let privateLog: PrivateLog;
 let stopping = false, folder = '', logs = '', token = '', started = false;
 let checkInstallation = inspect;
 const report = (value: object) => { if (process.connected) process.send?.(value); };
 function log(data: Buffer) {
-  logs = (logs + data.toString().replaceAll(token, '[credential]')).slice(-65536);
+  logs = (logs + privateLog.append(data)).slice(-65536);
   report({ logs });
 }
 async function stop(failed = false, message = '') {
   if (stopping) return; stopping = true;
   report({ phase: 'stopping' });
   for (const child of [...children].reverse()) {
-    if (child.exitCode !== null || child.signalCode !== null || !child.pid) continue;
-    const done = new Promise<void>(resolve => child.once('close', () => resolve()));
-    child.kill('SIGTERM');
-    const timer = setTimeout(() => { try { process.kill(-child.pid!, 'SIGKILL'); } catch { /* The group already stopped. */ } }, 30000);
-    await done; clearTimeout(timer);
+    await groups.get(child)!.stop();
   }
+  logs = (logs + (privateLog?.finish() || '')).slice(-65536);
+  if ([...groups.values()].some(group => group.forced || group.error)) { failed = true; message = 'An owned process group required forced cleanup. Read its log.'; }
   if (!failed && children.some(c => ['runtime', 'gateway'].includes(kinds.get(c) || '') && c.exitCode !== 0)) {
     failed = true; message = 'An owned process did not exit cleanly. Read its log.';
   }
   if (folder) writeFileSync(join(folder, 'result.json'), JSON.stringify({ status: failed ? 'failed' : 'stopped', error: message,
-    children: children.map(c => ({ kind: kinds.get(c), exit: c.exitCode, signal: c.signalCode })), logs }), { mode: 0o600 });
+    children: children.map(c => ({ kind: kinds.get(c), exit: c.exitCode, signal: c.signalCode,
+      groupStopped: !groups.get(c)!.error, forced: groups.get(c)!.forced })), logs }), { mode: 0o600 });
   report({ phase: failed ? 'failed' : 'stopped', error: message });
   if (process.connected) process.disconnect();
 }
 function child(file: string, args: string[], cwd: string, gpu: string, kind = 'check') {
   if (stopping) throw Error('Startup was stopped.');
   const proc = spawn(file, args, { cwd, env: environment(gpu), stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+  groups.set(proc, new OwnedGroup(proc));
   children.push(proc); kinds.set(proc, kind); proc.stdout!.on('data', log); proc.stderr!.on('data', log);
   proc.on('error', error => { void stop(true, error.message); });
   return proc;
@@ -51,7 +55,7 @@ async function freePort() {
 }
 async function start(value: unknown) {
   if (started) throw Error('The runtime already started.'); started = true;
-  const p = runtimeProfile(value); token = randomBytes(32).toString('hex');
+  const p = runtimeProfile(value); token = randomBytes(32).toString('hex'); privateLog = new PrivateLog(token);
   report({ phase: 'starting', profile: p });
   const inspected = await checkInstallation(p, async (file, args, cwd, timeout = 120000) => {
     const proc = child(file, args, cwd || p.build, p.gpu); let output = '', failure = '';

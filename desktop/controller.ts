@@ -8,7 +8,7 @@ import { command, terminal } from '../shared/validate.js';
 import { Catalog } from './catalog.js';
 import { RuntimeManager } from './runtime/manager.js';
 import { inspect } from './runtime/inspect.js';
-import { run } from './runtime/process.js';
+import { CommandRunner } from './runtime/process.js';
 import { gpuRows } from '../shared/setup.js';
 import { upload, list } from './media.js';
 import type { Command, Project, Reply, State, Turn } from '../shared/types.js';
@@ -19,6 +19,7 @@ export class Controller {
   private abort = new AbortController();
   private task?: Promise<void>;
   private queue: Promise<unknown> = Promise.resolve();
+  private commands = new CommandRunner(); private closing?: Promise<void>;
   state: State;
   constructor(folder: string, private readonly emit: (state: State) => void,
     private readonly makeGateway = (url: string, token: string) => new Gateway(url, token),
@@ -85,15 +86,15 @@ export class Controller {
     this.update(id, { phase, error: detail, ...(handle ? { handle, epoch: handleEpoch(handle) } : {}) });
   }
   async run(raw: unknown): Promise<Reply> {
-    const operation = this.queue.then(() => this.execute(command(raw)));
+    const operation = this.queue.then(() => { if (this.closing) throw Error('The desktop is closing.'); return this.execute(command(raw)); });
     this.queue = operation.catch(() => {}); return operation;
   }
   private async execute(cmd: Command): Promise<Reply> {
     switch (cmd.type) {
       case 'state': break;
       case 'chooseFolder': case 'choosePath': case 'exportProject': case 'uploadMedia': throw Error('Use the desktop file picker.');
-      case 'runtimeInspect': return { state: structuredClone(this.state), inspection: await inspect(cmd.profile) };
-      case 'runtimeDevices': return { state: structuredClone(this.state), gpus: gpuRows(await run('/usr/bin/nvidia-smi', ['--query-gpu=uuid,name,memory.free,memory.total', '--format=csv,noheader,nounits'], undefined, 10000)) };
+      case 'runtimeInspect': return { state: structuredClone(this.state), inspection: await inspect(cmd.profile, this.commands.run) };
+      case 'runtimeDevices': return { state: structuredClone(this.state), gpus: gpuRows(await this.commands.run('/usr/bin/nvidia-smi', ['--query-gpu=uuid,name,memory.free,memory.total', '--format=csv,noheader,nounits'], undefined, 10000)) };
       case 'runtimeSave':
         this.catalog.edit(c => { if (!c.runtimes.some(p => p.name === cmd.profile.name) && c.runtimes.length >= 32) throw Error('The runtime profile limit is 32.'); c.runtimes = [...c.runtimes.filter(p => p.name !== cmd.profile.name), cmd.profile]; }); break;
       case 'runtimeRemove': this.catalog.edit(c => { c.runtimes = c.runtimes.filter(p => p.name !== cmd.name); }); break;
@@ -246,5 +247,9 @@ export class Controller {
     finally { this.state.uploading = false; this.publish(); }
     return { state: structuredClone(this.state) };
   }
-  async close(): Promise<void> { this.abort.abort(); await this.task; await this.runtime.stop(); this.store.close(); }
+  close(): Promise<void> {
+    return this.closing ||= (async () => {
+      this.abort.abort(); await this.commands.close(); await this.queue; await this.task; await this.runtime.stop(); this.store.close();
+    })();
+  }
 }

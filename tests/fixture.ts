@@ -15,9 +15,11 @@ export function status(cursor: number, bytes: Buffer, next: number, phase = 'com
     output: { encoding: 'base64', bytes: bytes.subarray(cursor, next).toString('base64'), cursor: String(cursor),
       next_cursor: String(next), total_bytes: String(bytes.length) } };
 }
-export async function fixture(media = false) {
+export async function fixture(media = false, modelCount = 1, immediate = false) {
   const sources = new Map<string, unknown>(), discovery = structuredClone(caps);
   if (media) { discovery.models[0].input.push('image', 'audio'); Object.assign(discovery.features, { private_media: true }); Object.assign(discovery.limits, { upload_bytes: 33554432, private_media_bytes: '33554432' }); }
+  for (let i = 1; i < modelCount; i++) discovery.models.push({ ...discovery.models[0], id: `text-${i}`, sha256: String(i).repeat(64) });
+  let sourceCounter = 0;
   const calls: { method: string; path: string; body: unknown }[] = [];
   let mode: 'normal' | 'lost' | 'lost-handle' | 'expired' | 'hold' = 'normal', cancelled = false;
   const bytes = Buffer.from('Hello, project. Unicode: \u20ac.');
@@ -30,7 +32,7 @@ export async function fixture(media = false) {
     res.setHeader('Content-Type', 'application/json');
     if (url.pathname.endsWith('capabilities')) { res.end(JSON.stringify(discovery)); return; }
     if (url.pathname.includes('/media')) {
-      const id = 'media-' + (sources.size + 1).toString(16).padStart(32, '0');
+      const id = 'media-' + (++sourceCounter).toString(16).padStart(32, '0');
       if (req.method === 'POST') { const source = { id, sha256: createHash('sha256').update(bytesIn).digest('hex'), bytes: String(bytesIn.length), phase: 6, status: 0, format: req.headers['content-type'] === 'image/jpeg' ? 1 : 3 };
         sources.set(id, source); if (mode === 'lost') { req.socket.destroy(); return; } res.end(JSON.stringify(source)); return; }
       if (req.method === 'DELETE') { sources.delete(url.pathname.split('/').at(-1)!); res.writeHead(204).end(); return; }
@@ -44,7 +46,7 @@ export async function fixture(media = false) {
       cancelled = false; res.writeHead(202).end(JSON.stringify({ schema: 'aotx.admission.v1', id: handle, runtime_epoch: '1', state: 'accepted' })); return;
     }
     if (mode === 'expired') { res.writeHead(410).end('{}'); return; }
-    const cursor = Number(url.searchParams.get('cursor') || 0), next = Math.min(bytes.length, cursor + 2);
+    const cursor = Number(url.searchParams.get('cursor') || 0), next = Math.min(bytes.length, cursor + (immediate ? bytes.length : 2));
     res.end(JSON.stringify(status(cursor, bytes, mode === 'hold' && !cancelled ? cursor : next, cancelled ? 'cancelled' : mode === 'hold' ? 'running' : 'completed')));
   });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
