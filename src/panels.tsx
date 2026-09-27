@@ -9,6 +9,8 @@ import { useStore, send } from './store';
 import { windows, type PanelId } from './windows';
 import { Conversation } from './conversation';
 import { Activity } from './rain';
+import { SharedWorkspace } from './shared-workspace';
+import { CcirFiles } from './ccir-files';
 function Connection() {
   const { state } = useStore(), [url, setUrl] = useState(state.project.endpoint || 'http://127.0.0.1:8080');
   const [token, setToken] = useState(''), [waiting, setWaiting] = useState(false);
@@ -65,7 +67,7 @@ function Inspector() {
     </>}
   </div>;
 }
-const panels = { conversation: Conversation, connection: Connection, project: Project, models: Models, files: Files, runtime: Runtime, sources: MediaSources, inspector: Inspector, activity: Activity };
+const panels = { conversation: Conversation, connection: Connection, project: Project, models: Models, files: Files, runtime: Runtime, sources: MediaSources, inspector: Inspector, activity: Activity, shared: SharedWorkspace, ccir: CcirFiles };
 export function Panel(props: IDockviewPanelProps) {
   const id = props.api.id as PanelId, Component = panels[id];
   const [maximized, setMaximized] = useState(false);

@@ -7,6 +7,7 @@
 AOTX-PRISM is a desktop workspace for AOTX. Connect an existing gateway, open a
 project folder and hold ordinary model conversations. Move, resize and dock
 utility windows without closing the conversation.
+Use complete CCIR files for persistent shared spaces and conversations.
 
 The development version is **0.1.0**. Source builds are available. No installer,
 version tag or application release is published.
@@ -21,10 +22,12 @@ version tag or application release is published.
 | Conversations | Text and advertised JPEG/WAV input, incremental output and exact cancellation |
 | Generation profiles | Saved settings bound to an exact model digest |
 | Recovery | Read a known request again without sending its prompt again |
+| Shared CCIR | Create, inspect, activate, save, copy and restore complete shared files |
+| Persistent conversations | Participant membership, scoped spaces, ordered events and exact request recovery |
 | Workspace | Docked or floating panels, saved layout, silver and graphite themes |
 | Activity window | Readable request tiles and an optional rain field |
 
-CCIR file creation and shared memory views are not integrated yet.
+Typed shared memory views and qualified control actions are not integrated yet.
 The activity window does not display CCIR background work.
 Model-driven file changes and command execution are outside the first release.
 
@@ -59,6 +62,7 @@ stored with the project. Connect again after an application restart.
 
 Use **Runtime setup** to start an installed local runtime instead of entering
 an external gateway. See [runtime and project setup](docs/setup.md) for the full flow.
+See [shared CCIR workspaces](docs/shared.md) for persistent conversations and complete files.
 
 Use **Windows** to open a panel. Drag its tab to move it. Use **Float** or **Dock**
 for explicit placement. Drag a window edge or divider to resize it.
@@ -96,6 +100,7 @@ See [connection and storage details](docs/architecture.md) for limits and bounda
 npm run check
 npm run test:desktop
 node --import tsx tests/setup-desktop.mjs
+node --import tsx tests/shared-desktop.mjs
 git diff --check
 ```
 

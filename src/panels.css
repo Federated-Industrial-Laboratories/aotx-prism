@@ -77,3 +77,19 @@ dd { margin: 5px 0 17px; overflow-wrap: anywhere; line-height: 1.5; font-size: 1
 .path-picker input { min-width: 0; flex: 1; }
 .attachment-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; font-size: 11px; }
 .attachment-list > span { border: 1px solid var(--line); padding: 4px; overflow-wrap: anywhere; }
+/* Shared views retain exact text and expose separate persistence states. */
+.shared-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.framed-section, .shared-receipt, .shared-message { border: 1px solid var(--line); margin: 12px 0; background: var(--surface); }
+.framed-section > h3, .shared-receipt > header, .shared-message > header { margin: 0; padding: 8px 12px; background: var(--metal); border-bottom: 1px solid var(--line); }
+.framed-section > :not(h3), .shared-receipt > :not(header), .shared-message > p { margin: 12px; }
+.shared-receipt > header { display: flex; justify-content: space-between; gap: 12px; }
+.shared-list { display: grid; gap: 4px; }
+.shared-list button { text-align: left; overflow-wrap: anywhere; }
+.shared-list small { display: block; margin-top: 4px; }
+.shared-message p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.shared-message { background: var(--raised); }
+.shared-chat textarea { min-height: 90px; width: 100%; resize: vertical; }
+.shared-chat h3, .shared-workspace code { overflow-wrap: anywhere; }
+.check-label { display: flex !important; flex-direction: row !important; align-items: center; gap: 6px; }
+.check-label input { width: auto; }
+.event-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px; border-bottom: 1px solid var(--line); }

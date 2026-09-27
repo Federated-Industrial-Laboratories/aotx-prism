@@ -70,11 +70,12 @@ test('lost desktop IPC stops the supervised runtime without adopting stored proc
 });
 test('startup refusal reports failure and closes its gateway grant process', async () => {
   const root = mkdtempSync(join(tmpdir(), 'prism-refusal-')), { worker, profile } = fixture(root), manager = new RuntimeManager(() => {}, worker);
-  writeFileSync(join(root, 'aotx_boot'), `#!${process.execPath}\nprocess.stderr.write('Model refused');process.exit(3);`, { mode: 0o700 });
+  writeFileSync(join(root, 'aotx_boot'), `#!${process.execPath}\nprocess.stderr.write('Model refused\\n');process.exit(3);`, { mode: 0o700 });
   try {
     manager.start(profile); await until(() => manager.state.phase === 'failed'); await manager.stop();
     assert.match(manager.state.error, /startup/); assert.match(manager.state.logs, /Model refused/);
     const result = JSON.parse(readFileSync(join(manager.state.folder, 'result.json'), 'utf8')); assert.equal(result.status, 'failed');
+    assert.equal(manager.state.logs, result.logs);
     assert.equal(result.children[1].exit, 3);
   } finally { await manager.stop(); rmSync(root, { recursive: true }); }
 });

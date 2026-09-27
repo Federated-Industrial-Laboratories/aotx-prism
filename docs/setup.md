@@ -29,6 +29,9 @@ The runtime performs its own memory admission and model verification.
 Each start creates a private directory with a journal, settings, grants and logs.
 Select a short storage path: the resulting service socket must fit 107 bytes.
 The model files stay in the selected store. They are not copied.
+
+Complete CCIR creation is a separate workflow that copies its packaged assets.
+See [shared workspaces](shared.md) for complete files and persistent conversations.
 The local gateway binds loopback and uses a new random credential.
 That credential remains in process memory; configuration stores only its hash.
 

@@ -18,7 +18,7 @@ export class RuntimeManager {
       worker.on('message', message => {
         const value = message as Partial<RuntimeState> & { token?: string };
         if (value.token) this.token = value.token;
-        for (const key of ['phase', 'folder', 'url', 'logs', 'error'] as const) if (value[key] !== undefined) Object.assign(this.state, { [key]: value[key] });
+        for (const key of ['phase', 'folder', 'url', 'logs', 'error', 'durability'] as const) if (value[key] !== undefined) Object.assign(this.state, { [key]: value[key] });
         this.changed(structuredClone(this.state));
       });
       worker.once('error', error => { this.state.error = error.message; });

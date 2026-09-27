@@ -3,6 +3,8 @@
 export type Phase = 'submitting' | 'accepted' | 'running' | 'completed' | 'failed' |
   'cancelled' | 'unknown' | 'interrupted' | 'expired';
 import type { SetupCommand, RuntimeState, RuntimeInspection, LocalCatalog, Gpu } from './setup.js';
+import type { SharedCommand, SharedState } from './shared.js';
+import type { CcirCommand, CcirState } from './ccir.js';
 export interface Media { id: string; name: string; modality: 'image' | 'audio'; sha256: string; bytes: number; endpoint: string; epoch: string; phase?: number; status?: number }
 export interface GenerationProfile { name: string; model: string; sha256: string; maxTokens: number; temperature: number }
 export interface Turn {
@@ -31,8 +33,10 @@ export interface State {
   connected: boolean; capabilities?: Capabilities; busy: boolean;
   notice: string; saved: boolean; layout: string | null; theme: 'silver' | 'graphite';
   catalog: LocalCatalog; runtime: RuntimeState; attachments: Media[]; uploading: boolean;
+  shared: SharedState;
+  ccir: CcirState;
 }
-export type Command = SetupCommand
+export type Command = SetupCommand | SharedCommand | CcirCommand
   | { type: 'state' } | { type: 'chooseFolder' }
   | { type: 'openProject'; path: string }
   | { type: 'connect'; url: string; token: string } | { type: 'disconnect' }

@@ -8,10 +8,10 @@ export function environment(gpu?: string): NodeJS.ProcessEnv {
   if (gpu) env.CUDA_VISIBLE_DEVICES = gpu;
   return env;
 }
-export function run(file: string, args: string[], cwd?: string, timeout = 120000, signal?: AbortSignal): Promise<string> {
+export function run(file: string, args: string[], cwd?: string, timeout = 120000, signal?: AbortSignal, gpu?: string): Promise<string> {
   if (signal?.aborted) return Promise.reject(Error('The local command was cancelled.'));
   return new Promise((resolve, reject) => {
-    const child = spawn(file, args, { cwd, env: environment(), stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+    const child = spawn(file, args, { cwd, env: environment(gpu), stdio: ['ignore', 'pipe', 'pipe'], detached: true });
     const group = new OwnedGroup(child);
     let output = '', failure = '';
     const kill = () => { if (child.pid) { try { process.kill(-child.pid, 'SIGKILL'); } catch { /* The process can exit before the signal. */ } } };

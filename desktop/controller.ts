@@ -11,6 +11,10 @@ import { inspect } from './runtime/inspect.js';
 import { CommandRunner } from './runtime/process.js';
 import { gpuRows } from '../shared/setup.js';
 import { upload, list } from './media.js';
+import { SharedSession } from './shared/session.js';
+import { MutationJournal } from './shared/journal.js';
+import { emptyShared, type SharedCommand } from '../shared/shared.js';
+import { CcirManager } from './runtime/ccir.js';
 import type { Command, Project, Reply, State, Turn } from '../shared/types.js';
 export class Controller {
   private store: ProjectStore;
@@ -20,6 +24,8 @@ export class Controller {
   private task?: Promise<void>;
   private queue: Promise<unknown> = Promise.resolve();
   private commands = new CommandRunner(); private closing?: Promise<void>;
+  private shared: SharedSession;
+  private ccir = new CcirManager(ccir => { this.state.ccir = ccir; this.publish(); });
   state: State;
   constructor(folder: string, private readonly emit: (state: State) => void,
     private readonly makeGateway = (url: string, token: string) => new Gateway(url, token),
@@ -32,14 +38,21 @@ export class Controller {
       if (!terminal(turn)) { turn.phase = turn.handle ? 'interrupted' : 'unknown'; turn.error = 'The previous connection ended. Read the saved handle to check the result.'; }
     }
     this.store.write(project);
+    this.shared = this.sharedSession();
     this.runtime = new RuntimeManager(runtime => {
       this.state.runtime = runtime; this.publish();
       if (runtime.phase === 'failed' && this.state.connected && this.state.project.endpoint === runtime.url) void this.run({ type: 'disconnect' });
     });
-    this.state = { catalog: structuredClone(catalog.value), runtime: structuredClone(this.runtime.state), attachments: [], uploading: false, version: 'development', project, folder: this.store.folder, selected: project.conversations[0]?.id || '',
+    this.state = { ccir: structuredClone(this.ccir.state), shared: structuredClone(this.shared.state), catalog: structuredClone(catalog.value), runtime: structuredClone(this.runtime.state), attachments: [], uploading: false, version: 'development', project, folder: this.store.folder, selected: project.conversations[0]?.id || '',
       connected: false, busy: false, notice: '', saved: true, layout: null, theme: 'silver' };
   }
   private publish(): void { this.emit(structuredClone(this.state)); }
+  private sharedSession() {
+    const store = this.store;
+    return new SharedSession(new MutationJournal(store.readShared(), data => store.writeShared(data)), shared => {
+      if (this.state) { this.state.shared = shared; this.publish(); }
+    });
+  }
   private persist(edit: (project: Project) => void): void {
     const next = structuredClone(this.state.project); edit(next);
     try { this.store.write(next); }
@@ -90,7 +103,16 @@ export class Controller {
     this.queue = operation.catch(() => {}); return operation;
   }
   private async execute(cmd: Command): Promise<Reply> {
+    if (cmd.type.startsWith('shared')) {
+      if (cmd.type === 'sharedConnect') await this.shared.connect(this.connected());
+      else await this.shared.execute(cmd as SharedCommand, this.state.project, this.state.capabilities, this.state.attachments);
+      if (cmd.type === 'sharedSend') this.state.attachments = [];
+      this.publish(); return { state: structuredClone(this.state) };
+    }
     switch (cmd.type) {
+      case 'ccirEstimate': case 'ccirCreate': case 'ccirInspect': case 'ccirCopy': this.ccir.start(cmd); break;
+      case 'ccirCancel': await this.ccir.cancel(); break;
+      case 'participantCreate': this.catalog.participant(cmd.name, cmd.id); break;
       case 'state': break;
       case 'chooseFolder': case 'choosePath': case 'exportProject': case 'uploadMedia': throw Error('Use the desktop file picker.');
       case 'runtimeInspect': return { state: structuredClone(this.state), inspection: await inspect(cmd.profile, this.commands.run) };
@@ -137,9 +159,11 @@ export class Controller {
           for (const conversation of project.conversations) for (const turn of conversation.turns) {
             if (!terminal(turn)) turn.phase = turn.handle ? 'interrupted' : 'unknown';
           }
-          store.write(project); this.catalog.recent(store.folder); this.store.close(); this.store = store;
+          store.write(project); store.readShared(); this.catalog.recent(store.folder); this.store.close(); this.store = store;
+          this.shared = this.sharedSession();
           this.state = { ...this.state, project, folder: store.folder, selected: project.conversations[0]?.id || '',
-            saved: true, notice: '', capabilities: undefined, attachments: [] };
+            saved: true, notice: '', capabilities: undefined, attachments: [], shared: emptyShared() };
+          this.state.shared = structuredClone(this.shared.state);
         } catch (error) { store.close(); throw error; }
         break;
       }
@@ -161,6 +185,7 @@ export class Controller {
         break;
       }
       case 'disconnect':
+        await this.shared.disconnect();
         this.abort.abort(); await this.task; this.task = undefined; this.gateway = undefined;
         this.state.connected = false; this.state.notice = 'Disconnected. Device requests are not cancelled.'; break;
       case 'newConversation': {
@@ -249,7 +274,7 @@ export class Controller {
   }
   close(): Promise<void> {
     return this.closing ||= (async () => {
-      this.abort.abort(); await this.commands.close(); await this.queue; await this.task; await this.runtime.stop(); this.store.close();
+      this.abort.abort(); await this.shared.disconnect(); await this.ccir.cancel(); await this.commands.close(); await this.queue; await this.task; await this.runtime.stop(); this.store.close();
     })();
   }
 }

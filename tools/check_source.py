@@ -38,7 +38,7 @@ def inspect(root: Path) -> tuple[int, list[str]]:
             findings.append(f"{relative}: missing required file")
     for path in sorted(root.rglob("*")):
         relative = path.relative_to(root)
-        if any(part in SKIP for part in relative.parts[:-1]):
+        if any(part in SKIP for part in relative.parts):
             continue
         if path.is_symlink():
             findings.append(f"{relative}: source links are not supported")
