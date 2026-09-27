@@ -12,10 +12,15 @@ jobs:
   repository:
     name: Repository checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - run: python3 tools/check_source.py
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+      - run: node --version && npm --version
+      - run: npm ci --ignore-scripts
+      - run: npm run check
       - run: git show --format= --check HEAD

@@ -1,44 +1,106 @@
-# AOTX-PRISM
+<p align="center"><img src="public/prism.svg" width="112" alt="AOTX-PRISM" /></p>
+<h1 align="center">AOTX-PRISM</h1>
+<p align="center">Project Runtime Interface and Session Manager</p>
 
-Project Runtime Interface and Session Manager.
+---
 
-AOTX-PRISM is a desktop client project for AOTX conversations, project files and
-CCIR runtime files. It uses the existing AOTX interfaces.
+AOTX-PRISM is a desktop workspace for AOTX. Connect an existing gateway, open a
+project folder and hold ordinary model conversations. Move, resize and dock
+utility windows without closing the conversation.
 
-The repository is in development. No application or installable release is
-available yet.
+The development version is **0.1.0**. Source builds are available. No installer,
+version tag or application release is published.
 
-## Scope
+## Current capabilities
 
-The first application is planned to support these workflows:
+| Workflow | Support |
+| --- | --- |
+| Project folders | Local conversation history and read-only text previews |
+| Gateway connection | Bearer authentication, model discovery and capability display |
+| Conversations | Text input, incremental output, exact cancellation and saved request handles |
+| Recovery | Read a known request again without sending its prompt again |
+| Workspace | Docked or floating panels, saved layout, silver and graphite themes |
+| Activity window | Optional request status with a decorative rain field |
 
-- Start ordinary model conversations and organize project files.
-- Create or open CCIR runtime files through existing AOTX interfaces.
-- Inspect conversation sources, available controls and save state.
-- Open an optional CCIR activity window from the menu.
+CCIR file creation, managed runtime launch, shared memory views and media input
+are not integrated yet. The activity window does not display CCIR idle output.
+Model-driven file changes and command execution are outside the first release.
 
-These workflows are planned. Model-driven file changes and command execution
-are outside the first release.
+## Build and start
+
+Use Linux with a graphical desktop, Node.js 22.16 or later, npm and Python 3.12
+or later. The source build has been exercised on Linux x86-64. Other platforms
+are not qualified. An AOTX gateway is required for inference.
+
+```sh
+npm ci
+npm run build
+npm start
+```
+
+Dependency versions are pinned in `package-lock.json`. Installation downloads the
+pinned Electron runtime. The application bundles its fonts and interface assets.
+No account or external web content is required to open the workspace.
+
+## First conversation
+
+1. Open **Project** from the menu.
+2. Enter an existing folder path, or use **Browse folders**.
+3. Select **Open project**. PRISM creates private metadata in `.prism`.
+4. Open **Connection**. Enter the gateway URL and bearer token.
+5. Select **Connect**. Open **Models** to inspect or change the generation settings.
+6. Select **New conversation**, enter a message and select **Send message**.
+
+The application starts with a local workspace under its desktop data directory.
+Reopen a project folder to restore its conversations. A bearer token is not
+stored with the project. Connect again after an application restart.
+
+Use **Windows** to open a panel. Drag its tab to move it. Use **Float** or **Dock**
+for explicit placement, and drag a window edge or divider to resize it.
+**Reset layout** restores the conversation view. Closing a panel does not cancel
+its device request. The optional system folder picker is the only modal selector.
+
+## Storage and request state
+
+Project history is stored in `.prism/project.sqlite3`. Project files are not sent
+to the model. Text previews are read-only and exclude hidden files and links.
+Close PRISM before copying a project database for backup.
+
+Local history and device execution have separate states. **Completed** reports a
+terminal device result. The footer reports whether history was saved locally.
+If output reading stops, reconnect to the same gateway and select **Read result**.
+PRISM does not send a prompt again after an uncertain admission.
+
+**Cancel request** sends cancellation for the exact request handle. A final device
+state confirms the result. Disconnecting or exiting stops reads but does not
+cancel device work. A runtime restart can expire ordinary request handles; local
+history remains available.
+
+See [connection and storage details](docs/architecture.md) for limits and boundaries.
 
 ## Development
 
-The development version is `0.1.0`, stored in [VERSION](VERSION).
-No version tag or application package is published.
-
-Run the repository checks with Python 3.12 or later:
-
 ```sh
-python3 tools/check_source.py
+npm run check
+npm run test:desktop
 git diff --check
 ```
 
-These checks inspect source files and version metadata. They do not establish
-application or runtime acceptance.
+The desktop test requires a visible graphical session. It uses an isolated project
+and a local HTTP fixture. It does not claim GPU inference acceptance.
 
-See [contribution rules](CONTRIBUTING.md), [version and release rules](docs/versioning.md),
-and [changes](CHANGELOG.md).
+| Path | Responsibility |
+| --- | --- |
+| `src/` | React views, Dockview layout and local styles |
+| `desktop/` | Sandboxed application boundary, gateway transport and project storage |
+| `shared/` | Typed commands and bounded project data |
+| `tests/` | Protocol, storage, lifecycle and visible desktop checks |
+| `tools/` | Source and version checks |
+
+See [contribution rules](CONTRIBUTING.md), [version rules](docs/versioning.md) and
+[changes](CHANGELOG.md). The client uses existing AOTX interfaces.
 
 ## License
 
-The source uses the [Apache License 2.0](LICENSE).
-See [NOTICE](NOTICE) for attribution.
+The source uses the [Apache License 2.0](LICENSE). Bundled fonts use the SIL Open
+Font License. See [NOTICE](NOTICE) and [dependency notices](docs/dependencies.md).

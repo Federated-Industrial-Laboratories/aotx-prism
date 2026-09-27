@@ -19,19 +19,23 @@ Preserve third-party licenses and notices.
 Run these commands before a commit:
 
 ```sh
-python3 tools/check_source.py
+npm run check
+npm run test:desktop
 git diff --check
 git diff --cached --check
 ```
 
 The hosted `Repository checks` job runs for each branch push and pull requests to master.
 It checks source size, license identifiers, common secret patterns and version
-metadata. A passing job does not establish application acceptance.
+metadata. It also builds the application and runs focused tests. A passing job does not establish application acceptance.
 
 Add focused tests with application features. Test the complete affected workflow.
 Run visible desktop checks for interface changes.
+
 Target fewer than 400 lines per source file. The file ceiling is 1,000 lines.
-Add an Apache-2.0 SPDX identifier to source files.
+Add an Apache-2.0 SPDX identifier to source files. Generated dependency lockfiles
+retain their package-manager format and are excluded only from the line ceiling.
+Build outputs are excluded from source checks.
 
 Substantial code receives one independent review after author checks pass.
 Resolve findings and run the affected checks again. Small changes receive an

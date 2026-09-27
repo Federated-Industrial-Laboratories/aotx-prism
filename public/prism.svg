@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512" viewBox="0 0 512 512" version="1.1" id="SVGRoot">
+  <defs id="defs317">
+    <linearGradient id="linearGradient19968">
+      <stop style="stop-color:#ffc800;stop-opacity:1;" offset="0" id="stop19964" />
+      <stop style="stop-color:#e38700;stop-opacity:1;" offset="1" id="stop19966" />
+    </linearGradient>
+    <linearGradient id="linearGradient19952">
+      <stop style="stop-color:#ffcc00;stop-opacity:1;" offset="0" id="stop19948" />
+      <stop style="stop-color:#ff9800;stop-opacity:1;" offset="1" id="stop19950" />
+    </linearGradient>
+    <linearGradient id="linearGradient19944">
+      <stop style="stop-color:#ff9900;stop-opacity:1;" offset="0" id="stop19940" />
+      <stop style="stop-color:#ffcc00;stop-opacity:1;" offset="1" id="stop19942" />
+    </linearGradient>
+    <linearGradient xlink:href="#linearGradient19944" id="linearGradient19946" x1="265.62106" y1="247.93739" x2="427.26794" y2="247.93739" gradientUnits="userSpaceOnUse" />
+    <linearGradient xlink:href="#linearGradient19952" id="linearGradient19954" x1="84.732056" y1="247.93739" x2="246.37895" y2="247.93739" gradientUnits="userSpaceOnUse" />
+    <radialGradient xlink:href="#linearGradient19968" id="radialGradient19970" cx="256.50006" cy="359.77402" fx="256.50006" fy="359.77402" r="160" gradientTransform="matrix(1,0,0,0.3,0,251.84181)" gradientUnits="userSpaceOnUse" />
+  </defs>
+  <g id="layer2">
+    <path style="fill:url(#linearGradient19954);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.75748;stroke-linejoin:bevel;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" d="m 245.50021,295.77401 -160.000001,96 160.000001,-288 z" id="path15935" />
+    <path style="fill:url(#linearGradient19946);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.75748;stroke-linejoin:bevel;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" d="m 266.49979,103.77401 160,288 -160,-96 z" id="path15951" />
+    <path style="fill:url(#radialGradient19970);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.75748;stroke-linejoin:bevel;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" d="M 96.500052,407.77401 H 416.50005 l -160,-96 -159.999998,96" id="path18121" />
+  </g>
+</svg>
