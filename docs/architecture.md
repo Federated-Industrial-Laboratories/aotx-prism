@@ -1,0 +1,77 @@
+# Connection and storage
+
+PRISM separates the reusable web interface from desktop operations. React views
+receive typed commands and state snapshots through a sandboxed preload boundary.
+The renderer has no Node.js access, generic IPC interface or direct network access.
+The desktop process owns gateway credentials and project database transactions.
+
+## Gateway contract
+
+The client targets the ordinary inference routes in AOTX 0.3.5:
+
+| Route | Use |
+| --- | --- |
+| `GET /aotx/v1/capabilities` | Models, current epoch, limits and feature availability |
+| `POST /aotx/v1/requests` | One native admission for a user submission |
+| `GET /aotx/v1/requests/{id}?cursor={byte}` | Incremental output and request state |
+| `POST /aotx/v1/requests/{id}/cancel` | Exact request cancellation |
+
+Remote connections require HTTPS. HTTP is permitted for exact loopback addresses
+and `localhost`. SSH tunnels can expose a remote gateway on loopback. Redirects
+are refused. Tokens stay in process memory and are cleared on disconnect or exit.
+Gateway TLS certificates must pass the system trust checks.
+
+Only completed turns form the next request's history. Failed or cancelled output
+remains visible but does not become a successful assistant turn. An unresolved
+request blocks another submission in that conversation. Start a new conversation
+when a lost admission has no recoverable handle.
+
+The pending prompt is saved before admission. A returned handle is saved before
+output polling. If a POST response is lost, the client reports uncertainty and
+never retries that POST. A known handle permits safe status reads. Gateway and
+runtime restarts can have different recovery results; ordinary handles are ephemeral.
+
+Byte cursors, request identities and epochs are checked before output is applied.
+The client retains raw bytes across UTF-8 boundaries and drains all terminal
+windows before reporting completion. A save failure stops new submissions.
+
+## Local files
+
+A selected folder contains private `.prism/project.sqlite3` metadata. SQLite uses
+transactions, full synchronization and revision checks. Concurrent writers cannot
+silently replace another writer's accepted revision. Reopen after a conflict.
+The metadata directory must be private and owned by the current account.
+
+Project file access is read-only. Paths are restricted to visible entries in the
+selected folder. Links, device files, non-UTF-8 text and oversized files are refused.
+Folder navigation below the selected project is not implemented.
+
+| Limit | Value |
+| --- | --- |
+| Conversations per project | 64 |
+| Turns per conversation | 128 |
+| Serialized project | 16 MiB |
+| Output per request | 1 MiB |
+| HTTP response and request body | 2 MiB each |
+| HTTP exchange deadline | 30 seconds |
+| Text preview | 128 KiB |
+| Directory view | 128 entries, at most 4,096 inspected entries |
+| Saved layout | 256 KiB, seven known panels |
+
+Gateway model and prompt limits still apply. PRISM does not truncate a conversation
+silently to fit them. A large project can reach its byte limit before its count limits.
+
+## Desktop boundary
+
+The application loads bundled assets through `prism://app/`. Navigation, pop-up
+windows, webviews and permission requests are refused. A content security policy
+blocks remote resources and renderer network calls. IPC accepts only the main
+application frame and validates each named command.
+
+Layout and theme are stored separately from project content. Invalid layouts
+return to the default workspace. Closing a utility window does not own or end
+request execution. No renderer operation executes a shell command.
+
+Electron supplies the desktop host. React and Dockview implement the web views.
+A future host can implement the same typed bridge. Additional gateway features
+can use separate adapters without changing ordinary conversation storage.

@@ -5,12 +5,15 @@
 """Inspect repository text before publication."""
 
 import argparse
+import json
+import subprocess
+import sys
 import re
 from pathlib import Path
 
 SKIP = {".git", ".venv", "node_modules", "__pycache__", "dist", "build",
-        "out", "target", ".cache", "coverage", "test-results", "playwright-report"}
-SUFFIXES = {".py", ".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx", ".css", ".sh", ".rs"}
+        "dist-desktop", "out", "target", ".cache", "coverage", "test-results", "playwright-report"}
+SUFFIXES = {".py", ".js", ".mjs", ".cjs", ".cts", ".jsx", ".ts", ".tsx", ".css", ".sh", ".rs"}
 SECRET_PATTERNS = (
     re.compile(r"-----BEGIN (?:(?:OPENSSH|RSA|EC|DSA|ENCRYPTED) )?PRIVATE KEY-----"),
     re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}\b"),
@@ -52,7 +55,7 @@ def inspect(root: Path) -> tuple[int, list[str]]:
             findings.append(f"{relative}: file could not be read")
             continue
         count += 1
-        if len(content.splitlines()) > 1000:
+        if len(content.splitlines()) > 1000 and relative.as_posix() != "package-lock.json":
             findings.append(f"{relative}: more than 1000 lines")
         if path.suffix in SUFFIXES and "SPDX-License-Identifier: Apache-2.0" not in content[:500]:
             findings.append(f"{relative}: missing license identifier")
@@ -64,6 +67,16 @@ def inspect(root: Path) -> tuple[int, list[str]]:
                 findings.append(f"{relative}: use ASCII punctuation")
         if relative.as_posix() == "VERSION" and not VERSION.fullmatch(content.strip()):
             findings.append("VERSION: use MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH-rc.N")
+    package_path = root / "package.json"
+    if package_path.exists():
+        try:
+            version = (root / "VERSION").read_text().strip()
+            package = json.loads(package_path.read_text())
+            lock = json.loads((root / "package-lock.json").read_text())
+            if package["version"] != version or lock["version"] != version or lock["packages"][""]["version"] != version:
+                findings.append("Package and lock versions must match VERSION")
+        except (OSError, ValueError, KeyError):
+            findings.append("Invalid package version metadata")
     if not count:
         findings.append("No source text was inspected")
     return count, findings
@@ -77,7 +90,11 @@ def main() -> int:
     for finding in findings:
         print(finding)
     print(f"Repository checks: {count} text files, {len(findings)} findings")
-    return int(bool(findings))
+    paths = [str(path) for path in args.root.rglob("*")
+             if path.is_file() and path.suffix in SUFFIXES | {".md"}
+             and not any(part in SKIP for part in path.relative_to(args.root).parts[:-1])]
+    register = subprocess.run([sys.executable, str(args.root / "tools/ste-lint.py"), *paths], check=False)
+    return int(bool(findings) or register.returncode != 0)
 
 
 if __name__ == "__main__":

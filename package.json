@@ -1,0 +1,34 @@
+{
+  "name": "aotx-prism",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop workspace for AOTX conversations and project files.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist-desktop/desktop/main.js",
+  "engines": { "node": ">=22.16.0" },
+  "scripts": {
+    "build": "tsc --noEmit && tsc -p tsconfig.desktop.json && vite build",
+    "start": "electron .",
+    "dev": "vite --host 127.0.0.1",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:desktop": "node --import tsx tests/desktop.mjs",
+    "check": "python3 tools/check_source.py && npm run build && npm test"
+  },
+  "dependencies": {
+    "dockview": "8.3.0",
+    "dockview-react": "8.3.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "electron": "44.4.5",
+    "playwright": "1.63.0",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2",
+    "vite": "8.3.0"
+  }
+}
