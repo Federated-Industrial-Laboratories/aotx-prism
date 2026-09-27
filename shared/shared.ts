@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Define shared workspace snapshots and validate explicit shared commands.
+import { publication } from './evidence.js';
 import { text } from './validate.js';
 import { decimal, hex, handle, scope, rights, type Scope, type Participant, type Page, type Receipt } from './shared-protocol.js';
 export interface Mutation {
@@ -26,6 +27,7 @@ export type SharedCommand =
   | { type: 'sharedSelect'; kind: 'space' | 'conversation'; id: string }
   | { type: 'sharedMember'; participant: string; permissions: string[] }
   | { type: 'sharedSend'; text: string }
+  | { type: 'sharedPublish'; destination: string; id: string; version: string }
   | { type: 'sharedRetry' | 'sharedRead' | 'sharedCancel' | 'sharedReattach'; key: string }
   | { type: 'sharedInspect'; id: string }
   | { type: 'sharedLabel'; id: string; name: string }
@@ -42,6 +44,7 @@ export function sharedCommand(row: Record<string, unknown>): SharedCommand | und
       if (row.kind !== 'space' && row.kind !== 'conversation') throw Error('Invalid shared selection.');
       return { type: row.type, kind: row.kind, id: handle(row.id, row.kind === 'space' ? 'spc' : 'con') };
     case 'sharedMember': return { type: row.type, participant: hex(row.participant), permissions: rights(row.permissions) };
+    case 'sharedPublish': return publication(row);
     case 'sharedSend': return { type: row.type, text: text(row.text, 2048, true) };
     case 'sharedRetry': case 'sharedRead': case 'sharedCancel': case 'sharedReattach': return { type: row.type, key: hex(row.key) };
     case 'sharedInspect': return { type: row.type, id: handle(row.id, 'op') };

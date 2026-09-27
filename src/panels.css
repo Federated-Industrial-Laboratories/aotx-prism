@@ -93,3 +93,16 @@ dd { margin: 5px 0 17px; overflow-wrap: anywhere; line-height: 1.5; font-size: 1
 .check-label { display: flex !important; flex-direction: row !important; align-items: center; gap: 6px; }
 .check-label input { width: auto; }
 .event-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px; border-bottom: 1px solid var(--line); }
+
+.memory-list { display: grid; gap: 4px; margin: 16px 0; max-height: 260px; overflow: auto; }
+.memory-list button { display: grid; text-align: left; gap: 4px; }
+.memory-list code, .reference-list code, .activity-events code { overflow-wrap: anywhere; font-size: 10px; }
+.memory-list button.selected { border-left: 3px solid var(--accent); }
+.evidence-detail { border: 1px solid var(--line); margin: 16px 0; }
+.evidence-body { padding: 16px; }
+.source-quote { margin: 16px 0; padding: 16px; border-left: 3px solid var(--accent); background: var(--raised); white-space: pre-wrap; overflow-wrap: anywhere; }
+.reference-list, .activity-events { display: grid; gap: 8px; margin: 12px 0; }
+.reference-list article, .activity-events article { display: grid; gap: 6px; padding: 10px; border: 1px solid var(--line); }
+.check-field { display: flex !important; align-items: center; gap: 8px; }
+.check-field input { width: auto; }
+.evidence-body dl > div, .form-panel dl > div { display: contents; }

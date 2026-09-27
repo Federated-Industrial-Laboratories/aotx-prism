@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Present nonmodal project, connection, model and request panels.
+import { Evidence } from './evidence';
+import { Controls } from './controls';
 import { useEffect, useState } from 'react';
 import type { IDockviewPanelProps } from 'dockview';
 import { Project, Files } from './projects';
@@ -40,13 +42,14 @@ function Models() {
       <div className="field-pair"><label>Maximum output tokens<input aria-label="Maximum output tokens" type="number" min="1" max={caps.outputTokens} value={tokens} onChange={e => setTokens(Number(e.target.value))} /></label>
         <label>Temperature<input aria-label="Temperature" type="number" min="0" max="2" step="0.1" value={temperature} onChange={e => setTemperature(Number(e.target.value))} /></label></div>
       <button className="primary" disabled={!state.connected} onClick={() => void send({ type: 'profile', model, maxTokens: tokens, temperature })}>Apply settings</button>
+      <Controls />
       <h3>Generation profiles</h3><label>Profile name<input aria-label="Generation profile name" value={profileName} onChange={e => setProfileName(e.target.value)} /></label>
       <button disabled={!profileName} onClick={() => void send({ type: 'saveProfile', name: profileName })}>Save current settings</button>
       {state.project.profiles.map(p => <div className="button-row" key={p.name}><span>{p.name}</span><button onClick={() => void send({ type: 'applyProfile', name: p.name })}>Apply {p.name}</button>
         <button onClick={() => void send({ type: 'removeProfile', name: p.name })}>Remove {p.name}</button></div>)}
       <dl><dt>Prompt limit</dt><dd>{caps.promptBytes.toLocaleString()} bytes</dd><dt>Output limit</dt><dd>{caps.outputTokens.toLocaleString()} tokens</dd><dt>Model SHA-256</dt><dd><code>{current?.sha256}</code></dd><dt>Model inputs</dt><dd>{current?.input.join(', ')}</dd>
         <dt>Runtime epoch</dt><dd>{caps.epoch}</dd><dt>Automatic memory capability</dt><dd>{current?.automatic_memory ? 'Available for this model' : 'Unavailable for this model'}</dd></dl>
-      <p className="footnote">Attachments require a matching model input and media permission. Memory and controls require a separate CCIR connection.</p>
+      <p className="footnote">Attachments require a matching model input and media permission. Memory requires a shared CCIR connection.</p>
       <h3>Gateway features</h3><div className="capabilities">{Object.entries(caps.features).map(([key, value]) =>
         <div key={key}><span>{key.replaceAll('_', ' ')}</span><span className={value ? 'available' : 'muted'}>{value ? 'Available' : 'Unavailable'}</span></div>)}</div>
     </>}
@@ -67,7 +70,7 @@ function Inspector() {
     </>}
   </div>;
 }
-const panels = { conversation: Conversation, connection: Connection, project: Project, models: Models, files: Files, runtime: Runtime, sources: MediaSources, inspector: Inspector, activity: Activity, shared: SharedWorkspace, ccir: CcirFiles };
+const panels = { evidence: Evidence, conversation: Conversation, connection: Connection, project: Project, models: Models, files: Files, runtime: Runtime, sources: MediaSources, inspector: Inspector, activity: Activity, shared: SharedWorkspace, ccir: CcirFiles };
 export function Panel(props: IDockviewPanelProps) {
   const id = props.api.id as PanelId, Component = panels[id];
   const [maximized, setMaximized] = useState(false);

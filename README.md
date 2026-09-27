@@ -25,10 +25,9 @@ version tag or application release is published.
 | Shared CCIR | Create, inspect, activate, save, copy and restore complete shared files |
 | Persistent conversations | Participant membership, scoped spaces, ordered events and exact request recovery |
 | Workspace | Docked or floating panels, saved layout, silver and graphite themes |
-| Activity window | Readable request tiles and an optional rain field |
+| Evidence and controls | Typed memory, exact references, qualified doses and policy actions |
+| Activity window | Background counters, conversation event pages and an optional rain field |
 
-Typed shared memory views and qualified control actions are not integrated yet.
-The activity window does not display CCIR background work.
 Model-driven file changes and command execution are outside the first release.
 
 ## Build and start
@@ -73,7 +72,9 @@ for explicit placement. Drag a window edge or divider to resize it.
 its device request. The optional system folder picker is the only modal selector.
 
 The activity window opens with status tiles. Select **Show visualization** to open
-its rain field. See [interface structure](docs/interface.md) for themes and panels.
+its rain field. Memory evidence, qualified controls and policy actions use the
+existing gateway. Read [evidence and activity](docs/evidence.md) for their limits.
+See [interface structure](docs/interface.md) for themes and panels.
 
 ## Storage and request state
 
@@ -101,6 +102,7 @@ npm run check
 npm run test:desktop
 node --import tsx tests/setup-desktop.mjs
 node --import tsx tests/shared-desktop.mjs
+node --import tsx tests/evidence-desktop.mjs
 git diff --check
 ```
 

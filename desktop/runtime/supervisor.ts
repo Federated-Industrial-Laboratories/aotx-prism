@@ -13,7 +13,7 @@ import { saveOwned } from './save.js';
 import { inspectCcir } from './ccir.js';
 import { OwnedGroup } from './group.js';
 import { PrivateLog } from './log.js';
-import { runtimeProfile, type RuntimeProfile } from '../../shared/setup.js';
+import { runtimeProfile, runtimeActions, type RuntimeProfile } from '../../shared/setup.js';
 const children: ChildProcess[] = [];
 const kinds = new Map<ChildProcess, string>();
 const groups = new Map<ChildProcess, OwnedGroup>();
@@ -90,7 +90,7 @@ async function start(value: unknown) {
   writeFileSync(settings, 'window.on = 0\ntui.on = 0\n', { mode: 0o600 });
   writeFileSync(config, JSON.stringify({ socket, host: '127.0.0.1', port, revision: '1', models: { local: { role: p.role, published_at: 0 } },
     principals: [{ id: p.participant || randomBytes(16).toString('hex'), token_sha256: [createHash('sha256').update(token).digest('hex')],
-      models: ['local'], actions: ['infer', 'upload', 'telemetry', ...(p.ccir ? ['shared_read', 'shared_write', 'shared_manage'] : [])], pages: 0, tokens: 256, requests: 2, media: 16, media_bytes: 33554432 }],
+      models: ['local'], actions: runtimeActions(p), pages: 0, tokens: 256, requests: 2, media: 16, media_bytes: 33554432 }],
     origins: [], urls: { public: false, private: [] } }), { mode: 0o600 });
   report({ folder, url });
   const python = (args: string[]) => child(p.python, ['-I', '-u', '-c',

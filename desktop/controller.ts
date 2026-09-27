@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Own project transactions and request lifecycles independently of open panels.
+import { Observation } from './observation.js';
+import { emptyEvidence } from '../shared/evidence.js';
+import { selection } from '../shared/controls.js';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { Gateway, GatewayError, handleEpoch } from './gateway.js';
@@ -26,6 +29,7 @@ export class Controller {
   private commands = new CommandRunner(); private closing?: Promise<void>;
   private shared: SharedSession;
   private ccir = new CcirManager(ccir => { this.state.ccir = ccir; this.publish(); });
+  private observation = new Observation(evidence => { this.state.evidence = evidence; this.publish(); });
   state: State;
   constructor(folder: string, private readonly emit: (state: State) => void,
     private readonly makeGateway = (url: string, token: string) => new Gateway(url, token),
@@ -43,7 +47,7 @@ export class Controller {
       this.state.runtime = runtime; this.publish();
       if (runtime.phase === 'failed' && this.state.connected && this.state.project.endpoint === runtime.url) void this.run({ type: 'disconnect' });
     });
-    this.state = { ccir: structuredClone(this.ccir.state), shared: structuredClone(this.shared.state), catalog: structuredClone(catalog.value), runtime: structuredClone(this.runtime.state), attachments: [], uploading: false, version: 'development', project, folder: this.store.folder, selected: project.conversations[0]?.id || '',
+    this.state = { evidence: emptyEvidence(), ccir: structuredClone(this.ccir.state), shared: structuredClone(this.shared.state), catalog: structuredClone(catalog.value), runtime: structuredClone(this.runtime.state), attachments: [], uploading: false, version: 'development', project, folder: this.store.folder, selected: project.conversations[0]?.id || '',
       connected: false, busy: false, notice: '', saved: true, layout: null, theme: 'silver' };
   }
   private publish(): void { this.emit(structuredClone(this.state)); }
@@ -104,12 +108,21 @@ export class Controller {
   }
   private async execute(cmd: Command): Promise<Reply> {
     if (cmd.type.startsWith('shared')) {
+      if (cmd.type === 'sharedSelect' || cmd.type === 'sharedConnect') this.observation.clearMemory();
       if (cmd.type === 'sharedConnect') await this.shared.connect(this.connected());
-      else await this.shared.execute(cmd as SharedCommand, this.state.project, this.state.capabilities, this.state.attachments);
+      else await this.shared.execute(cmd as SharedCommand, this.state.project, this.state.capabilities, this.state.attachments, this.state.control);
       if (cmd.type === 'sharedSend') this.state.attachments = [];
       this.publish(); return { state: structuredClone(this.state) };
     }
     switch (cmd.type) {
+      case 'evidenceList': await this.observation.memory(this.connected(), this.shared.state, this.abort.signal, undefined, undefined, cmd.cursor); break;
+      case 'evidenceRead': await this.observation.memory(this.connected(), this.shared.state, this.abort.signal, cmd.id, cmd.version); break;
+      case 'activityRead': case 'activityPage':
+        await this.observation.activity(this.connected(), this.shared.state, this.abort.signal, cmd.type === 'activityPage' ? cmd.cursor : undefined); break;
+      case 'policyAction': await this.observation.action(this.connected(), cmd.action, cmd.epoch, cmd.revision, this.abort.signal); break;
+      case 'controlSelect':
+        this.connected(); selection(cmd.value || undefined, this.state.capabilities, this.state.project.model);
+        this.state.control = cmd.value || undefined; break;
       case 'ccirEstimate': case 'ccirCreate': case 'ccirInspect': case 'ccirCopy': this.ccir.start(cmd); break;
       case 'ccirCancel': await this.ccir.cancel(); break;
       case 'participantCreate': this.catalog.participant(cmd.name, cmd.id); break;
@@ -179,12 +192,14 @@ export class Controller {
             project.model = caps.models.find(m => m.input.includes('text'))!.id;
           project.maxTokens = Math.min(project.maxTokens, caps.outputTokens);
         });
+        this.observation.clear(); this.state.control = undefined;
         this.gateway = gateway; this.abort = abort;
         this.state.attachments = this.state.attachments.filter(m => m.endpoint === gateway.url && m.epoch === caps.epoch);
         this.state.capabilities = caps; this.state.connected = true; this.state.notice = 'Gateway connected.';
         break;
       }
       case 'disconnect':
+        this.observation.clear(); this.state.control = undefined;
         await this.shared.disconnect();
         this.abort.abort(); await this.task; this.task = undefined; this.gateway = undefined;
         this.state.connected = false; this.state.notice = 'Disconnected. Device requests are not cancelled.'; break;
@@ -202,6 +217,7 @@ export class Controller {
         const caps = this.state.capabilities; this.connected();
         if (!caps?.models.some(m => m.id === cmd.model && m.input.includes('text')) || cmd.maxTokens > caps.outputTokens)
           throw Error('Select an available model and token limit.');
+        if (cmd.model !== this.state.project.model) this.state.control = undefined;
         this.persist(p => { p.model = cmd.model; p.maxTokens = cmd.maxTokens; p.temperature = cmd.temperature; }); break;
       }
       case 'send': {
@@ -218,6 +234,8 @@ export class Controller {
           if (media.some(m => !this.state.capabilities?.models.find(model => model.id === project.model)?.input.includes(m.modality))) throw Error('The selected model does not accept these attachments.');
           return [{ type: 'text', text }, ...media.map(m => ({ type: 'media', media_id: m.id, modality: m.modality }))];
         };
+        const selectedControl = structuredClone(this.state.control);
+        const selected = selection(selectedControl, selectedControl ? await gateway.discover(this.abort.signal) : this.state.capabilities, project.model);
         const attachments = structuredClone(this.state.attachments);
         const messages = conversation.turns.filter(t => t.phase === 'completed').flatMap(t => [
           { role: 'user', content: input(t.prompt, t.media || []) }, { role: 'assistant', content: t.reply }]);
@@ -225,12 +243,12 @@ export class Controller {
         if (Buffer.byteLength(JSON.stringify(messages)) > (this.state.capabilities?.promptBytes || 0))
           throw Error('The conversation exceeds the gateway prompt limit. Start another conversation.');
         const turn: Turn = { id: randomUUID(), prompt: cmd.text, model: project.model, endpoint: gateway.url,
-          media: attachments, phase: 'submitting', bytes: '', cursor: 0, reply: '', error: '', created: new Date().toISOString(), cancelRequested: false };
+          ...(selectedControl ? { control: selectedControl } : {}), media: attachments, phase: 'submitting', bytes: '', cursor: 0, reply: '', error: '', created: new Date().toISOString(), cancelRequested: false };
         this.persist(p => p.conversations.find(c => c.id === cmd.id)!.turns.push(turn)); this.state.attachments = [];
         this.start(async () => {
           try {
             const admission = await gateway.submit({ model: turn.model, messages, max_tokens: project.maxTokens,
-              temperature: project.temperature }, this.abort.signal);
+              temperature: project.temperature, ...(selected ? { control: selected } : {}) }, this.abort.signal);
             this.update(turn.id, { ...admission, phase: 'accepted' });
             await this.poll(turn.id, gateway);
           } catch (error) { this.failure(turn.id, error); }
