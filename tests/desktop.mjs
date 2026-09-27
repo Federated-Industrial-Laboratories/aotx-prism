@@ -59,6 +59,12 @@ try {
     assert.ok(Math.abs(after.width - before.width) > 20);
     await page.getByRole('button', { name: 'Float connection', exact: true }).click();
     assert.equal(await page.locator('.dv-resize-container [data-panel="connection"]').count(), 1);
+    const tab = page.locator('.dv-resize-container .dv-tab').filter({ hasText: 'Connection' });
+    assert.equal(await tab.count(), 1);
+    assert.equal(await tab.evaluate(element => {
+      const style = getComputedStyle(element); return style.color !== style.backgroundColor;
+    }), true);
+    if (output) await page.screenshot({ path: join(output, 'floating-silver.png') });
     await page.getByLabel('Gateway URL', { exact: true }).fill(server.url);
     await page.getByLabel('Bearer token', { exact: true }).fill(token);
     await page.getByRole('button', { name: 'Maximize connection', exact: true }).click();
@@ -87,6 +93,12 @@ try {
     await page.getByText('Runtime activity', { exact: true }).waitFor();
     assert.equal(await page.locator('canvas').count(), 0);
     assert.equal(await page.locator('.activity-tile').count(), 3);
+    const tab = page.locator('.dv-resize-container .dv-tab').filter({ hasText: 'Activity' });
+    assert.equal(await tab.count(), 1);
+    assert.equal(await tab.evaluate(element => {
+      const style = getComputedStyle(element); return style.color !== style.backgroundColor;
+    }), true);
+    if (output) await page.screenshot({ path: join(output, 'floating-graphite.png') });
     await page.getByRole('button', { name: 'Show visualization', exact: true }).click();
     assert.equal(await page.locator('canvas').count(), 1);
     const before = await page.locator('[data-panel="activity"]').boundingBox();

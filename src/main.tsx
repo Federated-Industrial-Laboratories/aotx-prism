@@ -2,6 +2,7 @@
 // Compose a dockable desktop workspace with local project navigation.
 import { createRoot } from 'react-dom/client';
 import { DockviewReact } from 'dockview-react';
+import { themeLight } from 'dockview';
 import { useState } from 'react';
 import { initialize, send, useStore } from './store';
 import { titles, windows, type PanelId } from './windows';
@@ -10,6 +11,7 @@ import 'dockview/dist/styles/dockview.css';
 import './style.css';
 import './panels.css';
 const components = { panel: Panel };
+const themes = { silver: themeLight, graphite: { ...themeLight, name: 'prism-graphite', colorScheme: 'dark' as const } };
 function App() {
   const { state, error, clear } = useStore(), [menu, setMenu] = useState(false);
   return <main className="app-shell" data-theme={state.theme}>
@@ -39,7 +41,7 @@ function App() {
       <div className="sidebar-bottom"><button onClick={() => windows.open('files')}>Project files <span>Read-only</span></button>
         <div><span className={`status-dot ${state.connected ? 'online' : ''}`} />{state.connected ? 'Gateway connected' : 'Gateway offline'}</div>
         <p>Project history stays in the folder shown above.</p></div></aside>
-      <div className="workspace"><DockviewReact components={components} onReady={event => windows.attach(event.api)} className="dockview-theme-light" /></div>
+      <div className="workspace"><DockviewReact components={components} theme={themes[state.theme]} onReady={event => windows.attach(event.api)} className="dockview-theme-light" /></div>
     </div>
     {(error || state.notice || !state.saved) && <div className={`notice ${error || !state.saved ? 'warning' : ''}`} role={error ? 'alert' : 'status'}>
       <span>{error || state.notice}</span>{error && <button aria-label="Dismiss error" onClick={clear}>Dismiss</button>}</div>}

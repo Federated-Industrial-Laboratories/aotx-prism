@@ -110,6 +110,7 @@ footer span:last-child { margin-left: auto; }
   --dv-paneview-header-border-color: var(--line); --dv-tab-divider-color: var(--line);
   --dv-active-sash-color: var(--accent); --dv-tab-font-size: 12px;
   --dv-floating-box-shadow: 0 10px 35px var(--shadow);
+  --dv-floating-titlebar-height: 10px; --dv-floating-titlebar-border-bottom: 1px solid var(--frame);
 }
 .dv-groupview { border: 1px solid var(--line); }
 .dv-tab.dv-active-tab { box-shadow: inset 0 2px var(--accent); }
@@ -117,6 +118,7 @@ footer span:last-child { margin-left: auto; }
 .dv-tab { border-right: 1px solid var(--line); }
 .dv-tab.dv-active-tab { background: var(--raised) !important; }
 .dv-resize-container { border: 1px solid var(--frame); box-shadow: 0 8px 24px var(--shadow); }
+.dv-floating-titlebar { background: var(--metal); border-top: 1px solid var(--highlight); }
 footer { background: var(--surface); }
 @media (max-width: 1000px) { .sidebar { width: 205px; } .brand strong { font-size: 17px; } .brand span { letter-spacing: 1px; } }
 @media (max-height: 740px) { .app-shell { margin: 6px; height: calc(100% - 12px); } .app-header { height: 70px; min-height: 70px; } .project-card { padding-block: 13px; } .sidebar-bottom { padding: 10px; } .sidebar-bottom button { margin-bottom: 10px; } }
