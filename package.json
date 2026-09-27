@@ -6,14 +6,18 @@
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist-desktop/desktop/main.js",
-  "engines": { "node": ">=22.16.0" },
+  "engines": {
+    "node": ">=22.16.0"
+  },
   "scripts": {
     "build": "tsc --noEmit && tsc -p tsconfig.desktop.json && vite build",
     "start": "electron .",
     "dev": "vite --host 127.0.0.1",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:desktop": "node --import tsx tests/desktop.mjs",
-    "check": "python3 tools/check_source.py && npm run build && npm test"
+    "check": "python3 tools/check_source.py && npm run build && npm test && npm run test:package",
+    "package:linux": "python3 tools/package_linux.py",
+    "test:package": "python3 tests/package_test.py && python3 tests/package_inputs_test.py"
   },
   "dependencies": {
     "dockview": "8.3.0",

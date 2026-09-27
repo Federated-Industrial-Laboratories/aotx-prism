@@ -66,7 +66,7 @@ and oversized files are refused. Each path component is opened without following
 | HTTP exchange deadline | 30 seconds; 300 seconds for media upload |
 | Text preview | 128 KiB |
 | Directory view | 128 entries, at most 4,096 inspected entries |
-| Saved layout | 256 KiB, eleven known panels |
+| Saved layout | 256 KiB, twelve known panels |
 | Nested folder depth | 16 components |
 | Saved generation profiles | 32 per project |
 | Saved runtime profiles | 32 per desktop account |

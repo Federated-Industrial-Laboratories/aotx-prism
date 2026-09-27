@@ -4,7 +4,7 @@ PRISM has its own version sequence. Its version does not follow the AOTX backend
 version. Record supported backend versions separately when integration is tested.
 
 [VERSION](../VERSION) is the source version. Package metadata and the application
-version display must agree with it when those components are added.
+version display agree with it.
 The initial development version is `0.1.0`. It is not a released application.
 
 ## Version changes
@@ -32,8 +32,7 @@ Tags and publication require explicit release authorization.
 Do not move a published tag or replace published artifacts with different bytes.
 Publish a new version for a correction.
 
-When packages are available, include their source identity, dependency notices
-and checksums. Test installation and upgrade behavior before publication.
+Packages include their source identity, dependency notices and checksums. Test installation and upgrade behavior before publication.
 Release status must distinguish source checks from complete application acceptance.
 
 Repository visibility is private. Publication to a public audience requires a

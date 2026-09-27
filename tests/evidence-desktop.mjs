@@ -54,7 +54,7 @@ let app, page;
 async function open(label) { await page.getByRole('button',{name:'Windows',exact:true}).click(); await page.locator('.menu-popup').getByRole('button',{name:label,exact:true}).click(); }
 async function check(name,work) { await work(); checks.push(name); console.log(`PASS ${name}`); }
 try {
-  app = await electron.launch({ chromiumSandbox:true, executablePath:resolve('node_modules/electron/dist/electron'),args:['.'],env });
+  app = await electron.launch({ chromiumSandbox:true, executablePath:process.env.PRISM_TEST_PACKAGE ? resolve(process.env.PRISM_TEST_PACKAGE,'runtime/electron') : resolve('node_modules/electron/dist/electron'),args:process.env.PRISM_TEST_PACKAGE ? [] : ['.'],env });
   page = await app.firstWindow(); page.on('pageerror',e=>errors.push(e.message));
   await page.getByRole('button',{name:'Connection',exact:true}).click(); await page.getByLabel('Gateway URL',{exact:true}).fill(url); await page.getByLabel('Bearer token',{exact:true}).fill(token);
   await page.getByRole('button',{name:'Connect',exact:true}).click(); await waitState(page,s=>s.connected); await page.getByRole('button',{name:'Close connection',exact:true}).click();

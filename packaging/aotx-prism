@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Start the bundled desktop with its sandbox enabled.
+# Inputs: desktop arguments. Output: desktop window. Exit: desktop status.
+set -eu
+package=$(dirname -- "$(readlink -f -- "$0")")
+unset ELECTRON_RUN_AS_NODE
+exec "$package/runtime/electron" "$@"

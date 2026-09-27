@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Check package integrity, distinct upgrades and preservation of unrelated files.
+# Inputs: synthetic packages. Output: assertions. Exit: 0 pass, 1 failure.
+import contextlib
+import io
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'packaging'))
+import install as installer
+from install import operate
+from verify import inventory, verify
+
+
+def fixture(root, index):
+    package = root / f'package-{index}'
+    package.mkdir()
+    for path in ('aotx-prism', 'runtime/electron', 'runtime/resources/app/package.json', 'runtime/resources/app/dist/index.html',
+                 'runtime/resources/app/dist-desktop/desktop/main.js', 'install.py', 'verify.py', 'LICENSE'):
+        target = package / path
+        target.parent.mkdir(exist_ok=True, parents=True)
+        target.write_text(f'Package {index}: {path}')
+        target.chmod(0o755 if path in ('aotx-prism', 'runtime/electron') else 0o644)
+    data = {'schema': 'aotx.prism.package.v1', 'platform': 'linux-x64', 'version': f'0.1.{index}',
+            'source_commit': f'{index + 1:040x}', 'lock_sha256': 'f' * 64, 'files': inventory(package)}
+    (package / 'manifest.json').write_text(json.dumps(data))
+    return package
+
+
+def batches(check):
+    def run(self):
+        for count in (1, 64):
+            for index in range(count):
+                with self.subTest(count=count, index=index):
+                    check(self, index)
+    return run
+
+
+class PackageTests(unittest.TestCase):
+    def test_distinct_upgrades_and_preserved_projects(self):
+        for count in (1, 64):
+            with self.subTest(count=count), tempfile.TemporaryDirectory() as temporary, contextlib.redirect_stdout(io.StringIO()):
+                root = Path(temporary)
+                prefix = root / 'Local Applications'
+                project = prefix / 'share/projects/.prism/project.sqlite3'
+                project.parent.mkdir(parents=True)
+                project.write_bytes(b'Preserved project')
+                for i in range(count):
+                    source = fixture(root, i)
+                    original = installer.entry
+                    with patch.object(installer, 'entry', lambda p, h: original(p, h) + f'X-AOTX-Package-Revision={i}\n'):
+                        operate('install', source, prefix)
+                    current = prefix / 'share/aotx-prism/current'
+                    self.assertEqual(verify(current.resolve())['source_commit'], f'{i + 1:040x}')
+                    self.assertEqual((current / 'runtime/resources/app/dist/index.html').read_text(), f'Package {i}: runtime/resources/app/dist/index.html')
+                    self.assertEqual(len(list((current.parent / 'releases').iterdir())), i + 1)
+                    self.assertEqual(os.readlink(prefix / 'bin/aotx-prism'), str(current / 'aotx-prism'))
+                operate('uninstall', source, prefix)
+                self.assertTrue(project.exists(), 'Uninstall removed the user project.')
+                self.assertEqual(project.read_bytes(), b'Preserved project')
+                self.assertFalse((prefix / 'share/aotx-prism').exists())
+                self.assertFalse((prefix / 'bin/aotx-prism').is_symlink())
+                self.assertFalse((prefix / 'share/applications/aotx-prism.desktop').exists())
+
+    @batches
+    def test_changed_bytes_modes_and_extra_files_are_refused(self, index):
+        for defect in ('bytes', 'mode', 'extra', 'link'):
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                source = fixture(root, index)
+                target = source / 'LICENSE'
+                if defect == 'bytes':
+                    target.write_text(f'Changed {index}')
+                elif defect == 'mode':
+                    target.chmod(0o777)
+                elif defect == 'extra':
+                    (source / 'extra').write_text(f'Unexpected {index}')
+                else:
+                    target.unlink()
+                    target.symlink_to('/etc/passwd')
+                with self.assertRaises(ValueError):
+                    operate('install', source, root / 'prefix')
+                self.assertFalse((root / 'prefix').exists())
+
+    @batches
+    def test_unrelated_target_and_unregistered_release_data_are_preserved(self, index):
+        with tempfile.TemporaryDirectory() as temporary, contextlib.redirect_stdout(io.StringIO()):
+            root = Path(temporary)
+            source = fixture(root, index)
+            prefix = root / 'prefix'
+            (prefix / 'bin').mkdir(parents=True)
+            binary = prefix / 'bin/aotx-prism'
+            binary.write_text(f'Unrelated {index}')
+            with self.assertRaises(ValueError):
+                operate('install', source, prefix)
+            self.assertEqual(binary.read_text(), f'Unrelated {index}')
+            binary.unlink()
+            operate('install', source, prefix)
+            extra = prefix / 'share/aotx-prism/current/project.txt'
+            extra.write_text(f'Preserve file {index}')
+            with self.assertRaises(ValueError):
+                operate('uninstall', source, prefix)
+            self.assertEqual(extra.read_text(), f'Preserve file {index}')
+            self.assertTrue(binary.is_symlink())
+
+    @batches
+    def test_unregistered_current_entries_are_preserved(self, index):
+        for defect in ('directory', 'file', 'external', 'traversal', 'wrong-name', 'lock'):
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as temporary, contextlib.redirect_stdout(io.StringIO()):
+                root = Path(temporary)
+                source = fixture(root, index)
+                prefix = root / 'prefix'
+                operate('install', source, prefix)
+                home = prefix / 'share/aotx-prism'
+                current = home / 'current'
+                selected = current.resolve()
+                current.unlink()
+                retained = root / 'retained.txt'
+                retained.write_text(f'Preserve {index}: {defect}')
+                if defect == 'directory':
+                    current.mkdir()
+                    retained = current / 'project.txt'
+                    retained.write_text(f'Preserve {index}: {defect}')
+                elif defect == 'file':
+                    current.write_text(f'Preserve {index}: {defect}')
+                    retained = current
+                elif defect == 'external':
+                    current.symlink_to(selected)
+                elif defect == 'traversal':
+                    current.symlink_to('releases/../releases/' + selected.name)
+                elif defect == 'wrong-name':
+                    renamed = selected.with_name('0.0.0-' + '0' * 12)
+                    selected.rename(renamed)
+                    current.symlink_to('releases/' + renamed.name)
+                else:
+                    current.symlink_to('releases/' + selected.name)
+                    (home / '.lock').unlink()
+                    (home / '.lock').mkdir()
+                    retained = home / '.lock/project.txt'
+                    retained.write_text(f'Preserve {index}: {defect}')
+                desktop = prefix / 'share/applications/aotx-prism.desktop'
+                before = desktop.read_bytes()
+                for action in ('uninstall', 'install'):
+                    with self.assertRaises(ValueError):
+                        operate(action, source, prefix)
+                    self.assertTrue(retained.exists(), 'The unregistered file was removed.')
+                    self.assertEqual(retained.read_text(), f'Preserve {index}: {defect}')
+                    self.assertTrue((prefix / 'bin/aotx-prism').is_symlink())
+                    self.assertEqual(desktop.read_bytes(), before)
+
+    @batches
+    def test_linked_parent_is_refused(self, index):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = fixture(root, index)
+            (root / 'other').mkdir()
+            (root / 'prefix').symlink_to(root / 'other')
+            with self.assertRaises(ValueError):
+                operate('install', source, root / 'prefix')
+            self.assertEqual(list((root / 'other').iterdir()), [])
+
+
+if __name__ == '__main__':
+    unittest.main()
