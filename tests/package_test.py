@@ -10,8 +10,10 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'packaging'))
+import install as installer
 from install import operate
 from verify import inventory, verify
 
@@ -42,7 +44,9 @@ class PackageTests(unittest.TestCase):
                 project.write_bytes(b'Preserved project')
                 for i in range(count):
                     source = fixture(root, i)
-                    operate('install', source, prefix)
+                    original = installer.entry
+                    with patch.object(installer, 'entry', lambda p, h: original(p, h) + f'X-AOTX-Package-Revision={i}\n'):
+                        operate('install', source, prefix)
                     current = prefix / 'share/aotx-prism/current'
                     self.assertEqual(verify(current.resolve())['source_commit'], f'{i + 1:040x}')
                     self.assertEqual((current / 'runtime/resources/app/dist/index.html').read_text(), f'Package {i}: runtime/resources/app/dist/index.html')

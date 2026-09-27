@@ -4,6 +4,8 @@
 # Inputs: action and optional prefix. Output: installed paths. Exit: 0 done, 1 refused.
 import argparse
 import fcntl
+import hashlib
+import re
 import json
 import os
 from pathlib import Path
@@ -70,21 +72,27 @@ def operate(action, package, prefix):
     for path in (home, applications, binary.parent):
         plain(path)
     marker = home / 'installation.json'
+    entry_hash = lambda value: hashlib.sha256(value.encode()).hexdigest()
+    desktop_text = entry(prefix, home)
+    allowed = [entry_hash(desktop_text)]
     present = home.exists()
     if present:
         plain(marker)
         saved = json.loads(marker.read_text())
-        if saved != {'schema': MARKER, 'prefix': str(prefix)}:
+        if saved.get('schema') != MARKER or saved.get('prefix') != str(prefix) or not isinstance(saved.get('desktop_hashes'), list):
             raise ValueError('The installation folder is not registered.')
+        allowed = saved['desktop_hashes']
+        if not 1 <= len(allowed) <= 2 or any(not isinstance(v, str) or not re.fullmatch('[0-9a-f]{64}', v) for v in allowed):
+            raise ValueError('Invalid registered desktop entry.')
     elif action == 'uninstall':
         raise ValueError('No registered installation exists.')
     for path in (binary, desktop):
         if path.exists() or path.is_symlink():
-            if not present or (path == binary and (not path.is_symlink() or os.readlink(path) != str(home / 'current/aotx-prism'))) or (path == desktop and (path.is_symlink() or path.read_text() != entry(prefix, home))):
+            if not present or (path == binary and (not path.is_symlink() or os.readlink(path) != str(home / 'current/aotx-prism'))) or (path == desktop and (path.is_symlink() or entry_hash(path.read_text()) not in allowed)):
                 raise ValueError('An existing launcher is not owned by this installation.')
     if not present:
         home.mkdir(parents=True, mode=0o755)
-        atomic(marker, json.dumps({'schema': MARKER, 'prefix': str(prefix)}))
+        atomic(marker, json.dumps({'schema': MARKER, 'prefix': str(prefix), 'desktop_hashes': allowed}))
     lock_path = home / '.lock'
     descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     with os.fdopen(descriptor, 'w') as lock:
@@ -124,7 +132,9 @@ def operate(action, package, prefix):
         applications.mkdir(parents=True, exist_ok=True)
         point(current, 'releases/' + name)
         point(binary, home / 'current/aotx-prism')
-        atomic(desktop, entry(prefix, home))
+        previous = entry_hash(desktop.read_text()) if desktop.exists() else entry_hash(desktop_text)
+        atomic(marker, json.dumps({'schema': MARKER, 'prefix': str(prefix), 'desktop_hashes': list(dict.fromkeys([previous, entry_hash(desktop_text)]))}))
+        atomic(desktop, desktop_text)
         print(f'Installed {data["version"]}: {binary}')
 
 
