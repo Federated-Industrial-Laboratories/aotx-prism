@@ -1,5 +1,9 @@
 # Version and release rules
 
+[Documentation](README.md) | [Changes](../CHANGELOG.md) | [Contributing](../CONTRIBUTING.md)
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
+
 PRISM has its own version sequence. Its version does not follow the AOTX backend
 version. Record supported backend versions separately when integration is tested.
 
@@ -37,3 +41,7 @@ Release status must distinguish source checks from complete application acceptan
 
 Repository visibility is private. Publication to a public audience requires a
 separate authorization and release review.
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
+
+[Documentation index](README.md) | [Project README](../README.md)

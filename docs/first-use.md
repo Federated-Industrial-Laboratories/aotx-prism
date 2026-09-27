@@ -1,67 +1,99 @@
 # First use
 
 PRISM opens a local workspace without starting a model. The connection strip
-shows whether a gateway is connected. A project folder stores local history.
-It is not a grant for model file access.
+reports gateway status. The project rail identifies where local history is stored.
+Choosing a folder does not grant a model access to its files.
 
-## Choose a workflow
+[Documentation](README.md) | [Installation](install.md) | [Shared CCIR](shared.md)
 
-| Need | Start here |
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
+
+## Choose how to connect
+
+| Available system | Start here |
 | --- | --- |
-| Use a running gateway | Open **Connection** and enter its URL and bearer token |
-| Start an installed local runtime | Open **Runtime setup** and check a saved installation profile |
-| Keep ordinary conversations in a folder | Open **Project**, choose the folder and select **Open project** |
-| Use persistent shared conversations | Open **CCIR workspace** after connecting a complete shared file |
-| Inspect memory or background work | Open **Windows > Memory evidence** or **Windows > Activity** |
+| A running local or remote gateway | Open **Connection** and enter its URL and bearer token. |
+| An installed local AOTX build | Follow [runtime setup](setup.md), then select **Connect owned runtime**. |
+| A complete shared CCIR file | Follow [activation](shared.md#open-a-complete-runtime), then open **CCIR workspace**. |
 
-An external gateway requires HTTPS, or HTTP through an exact loopback address.
-A local SSH tunnel can expose a remote gateway. Tokens remain in process memory.
-Enter the token again after restarting PRISM.
+Remote gateway URLs require HTTPS. HTTP is permitted for exact loopback addresses
+and `localhost`. An SSH tunnel can expose a remote gateway on loopback.
+Use the credential issued by its operator. PRISM does not retain that token on disk.
+
+## Open a project
+
+1. Open **Project**.
+2. Select **Browse folders** or enter an existing folder path.
+3. Select **Open project**.
+4. Check the current folder shown in the project rail.
+
+PRISM stores its history in the folder's private `.prism` directory.
+Disconnect before selecting another project. [Projects and files](projects.md)
+explains archives, exports and backups.
 
 ## Hold an ordinary conversation
 
-1. Open or select a project folder.
-2. Connect a gateway or select **Connect owned runtime** after local startup.
-3. Open **Models** and select an advertised model.
-4. Apply the token limit and temperature.
-5. Select **New conversation**.
-6. Set the conversation name and system prompt.
-7. Select **Create conversation**.
-8. Enter text and select **Send message**.
+1. Connect the gateway.
+2. Open **Models** and select an advertised model.
+3. Apply the output-token limit and temperature.
+4. Select **+ New conversation**.
+5. Set the name and review the system prompt.
+6. Select **Create conversation**.
+7. Enter a message and select **Send message**.
 
-Use Ctrl+Enter to send from the message box. Tab and Shift+Tab move keyboard focus.
-Enter or Space activates a focused button. Escape closes the open Windows menu.
-Use the theme selector for silver or graphite.
+The neutral default assigns no name or runtime role. Edit it before creation,
+or leave it blank. **Use neutral default** restores the supplied instructions.
+Existing conversations keep their original instructions.
 
-Model output is shown as received. **Completed** means the request has a terminal
-result; the footer separately reports local history storage.
-When supported, **Attach media** selects JPEG or WAV input explicitly.
-Project file previews are read-only and do not send files to the model.
+The ordinary system prompt permits at most 4,096 UTF-8 bytes. This is a prompt
+field limit, not the model's total context capacity. The connected backend also
+limits the combined prompt and output. PRISM does not silently trim history.
 
-## Open shared work
+Use Ctrl+Enter to send from the ordinary message box. Model output appears as
+received. **Completed** reports a terminal device result; the footer separately
+reports whether local history was saved.
 
-Shared CCIR files carry persistent participants, spaces, conversations and device
-state. A runtime profile names a local installation; a generation profile names
-model settings. Neither profile is a project or a shared privacy boundary.
+## Use persistent conversations
 
-Follow [shared workspaces](shared.md) to create or open a complete file.
-Select a participant, space and conversation before sending shared input.
-Shared receipts distinguish admission, completion and saved state.
-Save and stop a writer before copying a complete file.
+Open **CCIR workspace** after connecting a complete shared runtime. Register the
+participant, select a space and select **New CCIR conversation**. The setup window
+lets you set its name and instructions before the first input.
 
-Automatic memory, appraisal and controls depend on exact model qualification.
-Unqualified features remain unavailable. [Evidence and activity](evidence.md)
-explains supported views, exact references, controls and background counters.
-The optional visualization starts closed and does not generate model work.
+Shared prompts require advertised support. The supported prompt field and each
+shared input have separate 2,048-byte limits. Instructions remain fixed for that
+conversation. Runtime memory rules and authenticated actor context still apply.
+
+A shared result can be completed while its save is pending. Read the receipt,
+generation and pending bytes. Follow [shared CCIR](shared.md) for scopes,
+permissions and saved-file recovery.
+
+## Open supporting windows
+
+| Action | Window |
+| --- | --- |
+| Select a model or save generation settings | **Models** |
+| Select qualified controls or permitted runtime settings | **Affect** |
+| Read project files | **Project files** |
+| Inspect memory and source references | **Windows > Memory evidence** |
+| Read background counters and events | **Windows > Activity** |
+
+Panels can float, dock, resize and maximize. Closing a panel does not cancel its
+request. Choose silver or graphite with the theme selector.
+See [interface controls](interface.md) for keyboard and layout details.
 
 ## Resume after interruption
 
-Reopen the project from **Project**. Connect the same gateway when it still exists.
-For ordinary input with a retained handle, select **Read result**.
-An uncertain submission without a handle is not sent again automatically.
-For shared input, inspect the retained operation and its receipt before retrying.
-The shared journal preserves the exact request identity.
+Reopen the project and reconnect the same gateway when it is still available.
+Use **Read result** for an ordinary request with a retained handle. A submission
+with uncertain admission and no handle is not sent again automatically.
 
-Closing PRISM stops runtimes that it owns. External runtimes continue independently.
-Do not infer a saved device result from a local history entry alone.
-Read [setup](setup.md) and [connection and storage](architecture.md) for recovery limits.
+Shared operations retain an exact recovery identity. Inspect the receipt before
+using **Retry exact request**. This action differs from an ordinary resubmission.
+[Recovery guidance](troubleshooting.md#interrupted-requests) explains both cases.
+
+Closing PRISM stops its owned runtime. External runtimes continue under their
+operator's control. A local history entry alone does not establish a saved device result.
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
+
+[Documentation index](README.md) | [Project README](../README.md)

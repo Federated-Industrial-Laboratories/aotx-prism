@@ -1,5 +1,9 @@
 # Shared CCIR workspaces
 
+[Documentation](README.md) | [Runtime setup](setup.md) | [Recovery](troubleshooting.md)
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
+
 A complete CCIR file stores model assets, persistent conversations and durable runtime state.
 Active state remains on the GPU. PRISM uses the AOTX 0.3.5 shared gateway and file tools.
 Ordinary conversations retain their separate local history and temporary request handles.
@@ -22,6 +26,8 @@ Ordinary conversations retain their separate local history and temporary request
 PRISM prepares an empty checkpoint with the installed GPU state tool.
 The packager copies model assets, data modules and selected device settings.
 It enables the shared profile and embedding role. It does not change the source files.
+This creation path does not add a policy asset. Background scheduling requires
+a compatible policy supplied through the backend's complete-file tools.
 
 The initial storage allowance includes all regular asset files and 128 MiB for metadata.
 Saved history needs additional space. This allowance is not a file capacity guarantee.
@@ -67,7 +73,8 @@ The runtime still supplies memory rules, authenticated actor context and model f
 Instructions remain fixed for that conversation. Start another conversation to change them.
 
 The selected conversation exposes its exact saved prompt when the gateway supports this feature.
-Existing conversations keep their inherited runtime role.
+Existing conversations keep their original instructions. Older conversations without
+an explicit prompt retain their inherited runtime role.
 
 Prompt support must be advertised by the connected backend. Update both the core
 and gateway to use it. Earlier core versions cannot replay the new prompt records.
@@ -154,3 +161,7 @@ Retirement makes old device handles unavailable. It does not remove local journa
 Lists contain at most 64 rows per page. Use each list's next-page control to continue.
 
 See [runtime setup](setup.md) and [connection boundaries](architecture.md).
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
+
+[Documentation index](README.md) | [Project README](../README.md)

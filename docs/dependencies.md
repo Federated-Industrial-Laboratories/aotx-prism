@@ -1,5 +1,9 @@
 # Dependency notices
 
+[Documentation](README.md) | [License](../LICENSE) | [Notices](../NOTICE)
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
+
 The dependency lock records exact package versions and integrity values. Keep
 third-party license files when packaging the application.
 
@@ -19,3 +23,16 @@ third-party license files when packaging the application.
 Font license files are included in `public/fonts/`. The fonts are unmodified.
 Package license files are installed with the pinned dependencies. Electron's
 `LICENSE` and `LICENSES.chromium.html` must accompany a packaged desktop runtime.
+
+## Packaged notices
+
+Installed archives retain application licenses, font notices, Electron notices and
+licenses for bundled renderer dependencies. Development dependencies remain recorded
+in the source lockfile; they are not all shipped as runtime packages.
+
+The documentation header, divider and badge artwork are local repository assets.
+They add no runtime network request or external font dependency.
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
+
+[Documentation index](README.md) | [Project README](../README.md)

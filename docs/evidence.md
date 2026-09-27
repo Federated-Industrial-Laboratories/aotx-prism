@@ -1,117 +1,100 @@
 # Evidence and runtime activity
 
-PRISM reads memory and policy state from the connected gateway. The runtime owns
-these records. PRISM displays their bytes and does not create cognitive scores.
+PRISM reads memory and policy state from the gateway. The runtime owns these
+records; the desktop presents their contents and exact references.
+
+[Documentation](README.md) | [Shared CCIR](shared.md) | [Affect and controls](controls.md)
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
 
 ## Inspect memory
 
-1. Open **CCIR workspace**.
-2. Select a shared space.
-3. Open **Windows > Memory evidence**.
-4. Select **Refresh memory**.
-5. Select a record.
+1. Open **CCIR workspace** and select a shared space.
+2. Open **Windows > Memory evidence**.
+3. Select **Refresh memory**.
+4. Select a record to read its detail.
 
-Each page contains at most 64 records. The detail view reads at most 1 MiB and
-marks a larger payload as a bounded preview. Unknown formats retain their exact
-base64 bytes. Invalid known layouts do not produce a text or score view.
+Each page contains at most 64 records. Detail reads are bounded to 1 MiB and mark
+larger payloads as previews. Unknown formats retain their exact base64 bytes.
+Invalid known layouts do not produce a text or score view.
 
-Supported views include source text, extracted statements, contextual text,
-appraisals, relationship evidence, appraisal work, selections and task reviews.
-Quotes keep their original text. Appraisal values use the recorded integer scale.
+| Record | Display |
+| --- | --- |
+| Source and contextual text | Recorded text and available source identity. |
+| Extracted statements | Supported statement payloads and evidence fields. |
+| Appraisals and relationship evidence | Recorded values, scope and references. |
+| Appraisal work and selections | Recorded work state and selected evidence. |
+| Task reviews | Supported outcomes and their exact references. |
+
+Quotes retain original text. Appraisal values use the recorded integer scale.
 **Unknown** differs from zero. Confidence is not a calibrated probability.
+Task reviews do not supply new generated advice.
 
-Memory lists contain retained metadata. The detail endpoint returns the current
-version. A recorded reference with an exact version must match that version.
-The client refuses a replacement version, unavailable object or cold payload.
-It clears the old detail when a new read fails.
+## Check a source reference
 
-Shared metadata supplies a source ID but omits its version. **Read current source**
+A memory list contains retained metadata. Its detail endpoint returns the current
+version. A recorded exact reference must match that version. PRISM refuses a
+replacement version, unavailable object or cold payload, and clears failed old detail.
+
+Shared metadata supplies a source ID without its version. **Read current source**
 therefore cannot verify a historical citation alone. Exact references inside a
-selection retain their recorded versions. The gateway has no historical payload
-endpoint. Recorded quote offsets are byte offsets into their source.
+selection retain their recorded versions. Quote offsets address source bytes.
+The gateway has no historical payload endpoint.
 
 ## Correct or publish evidence
 
 Use shared conversation input for correction when the selected model advertises
-automatic memory. Loading a model alone does not qualify that feature. The HTTP
-interface has no arbitrary memory edit, delete or task-binding operation.
+automatic memory. Model loading alone does not qualify interpretation.
+The HTTP interface has no arbitrary memory edit, deletion or task-binding operation.
 
-To publish, open **Publish this record** and select a destination space. Confirm
-the exact version and select **Publish record**. The destination requires management
-permission. The mutation is stored before transmission, like other shared writes.
-Read its receipt in the shared workspace to inspect completion and saved state.
-
-Task reviews expose a supported outcome and its recorded references. They do not
-supply new generated advice. PRISM does not author new task bindings through HTTP.
+To publish a record, open **Publish this record** and select a destination space.
+Confirm the exact version and select **Publish record**. The destination requires
+management permission. PRISM stores the mutation before transmission.
+Read its shared receipt for completion and saved state.
 
 ## Select a qualified control
 
-Open **Affect** and use **Control and dose**. Only advertised, qualified pairs can
-be selected. PRISM sends the exact qualification digest and discrete dose.
-It does not interpolate doses or combine controls. Unsupported control formats
-remain unavailable while ordinary model use remains possible.
-
-Selection applies to new ordinary and shared inputs. Model changes and disconnects
-clear it. Before sending, PRISM checks current capabilities again. Shared inputs
-also check affect state. A changed qualification or active affect prevents submission.
-
-After an operator disables affect, send one input without an explicit control.
-This permits the runtime's required reset before a selected control. Runtime
-admission remains authoritative. Saved ordinary turns retain their chosen identity;
-shared journals retain the complete canonical request.
+Open **Affect** for qualified doses, runtime settings and selected-conversation
+state. [Affect and model controls](controls.md) describes their separate scopes,
+permission requirements and save behavior.
 
 ## Observe background work
 
-Open **Windows > Activity** for policy state, completion counters, save generation
-and selected conversation events. Events use a separate page of at most 64 records.
-Use **First event page** or **Next event page** to browse it. Refresh keeps that page.
-Policy work is distinct from foreground input.
-A quiet or unavailable policy does not imply hidden model activity.
+Open **Windows > Activity** for reported policy state, completion counters, save
+generation and selected-conversation events. It contains readable tables and
+counters, with no animated visualization.
 
+Events have a separate page of at most 64 records. Use **First event page** or
+**Next event page** to browse them. Refresh retains the current page.
 Observation refreshes while the panel and application are visible. Closing the
-panel stops future reads. Use **Maximize** and **Restore** to change its size.
+panel stops future reads. **Maximize** and **Restore** change its size.
+
+Policy work is distinct from foreground input. A quiet or unavailable policy does
+not imply hidden model activity. Opening Activity does not create background work.
+A runtime needs its own compatible policy assets and configuration.
 
 ## Change runtime affect settings
 
-Open **Affect** to read runtime settings and the selected CCIR state.
-Settings apply to native and CCIR sequences across the connected runtime.
-Ordinary HTTP chats bypass persistent affect and use qualified model controls.
-
-1. Select **Refresh affect settings**.
-2. Select a setting.
-3. Enter a value within the displayed range.
-4. Select **Apply setting**.
-5. Check the returned value and revision.
-
-Reads require telemetry or affect management permission. Changes require the
-separate `affect_manage` grant. For an owned runtime, select **Allow runtime affect
-controls** before starting. An external gateway's operator supplies its grants.
-Older gateways can report this feature as unavailable.
-
-Each change carries the current epoch and exact settings revision. A stale,
-refused or uncertain write is not repeated. Refresh before another change.
-A permission refusal disables writes until reconnect. Pending local setting
-changes also prevent remote writes.
-
-Changes apply to the next sequence. Running replies keep their captured settings.
-Settings do not qualify missing probes or steering assets. Use **Refresh scoped
-affect** to inspect the selected CCIR state and its probe availability.
-These values describe runtime state, not a person's emotions.
-
-An accepted setting is separate from durable storage. Select **Save CCIR state**
-and inspect its saved receipt in the shared workspace before relying on recovery.
+These settings are in the dedicated **Affect** window.
+See [runtime settings](controls.md#change-runtime-settings) for revision checks,
+operator grants and durable saves. Ordinary HTTP chats use qualified controls.
 
 ## Control policy work
 
-**Policy controls and counters** exposes pause, resume, stop and task-review
-selection. These actions require policy ABI 3 and management permission. Each
-request carries the displayed epoch and control revision as exact integers.
+**Policy controls and counters** provides pause, resume, stop and task-review
+selection. Actions require policy ABI 3 and management permission.
+Each request carries the displayed epoch and control revision as exact integers.
+
 A stale or uncertain action is not repeated. Refresh state before another action.
-A permission refusal disables these controls until reconnect.
+A permission refusal disables controls until reconnect.
 
-For an owned runtime, select **Allow background policy controls** in its profile
-before starting. This creates the explicit gateway grant. It does not enable task
-reviews automatically. An external gateway's operator controls its grants.
+For an owned runtime, select **Allow background policy controls** before startup.
+That grants access; it does not create policy assets or enable task reviews.
+An external runtime's operator supplies its configuration and grants.
 
-Policy actions do not expose native appraisal settings. Such settings require the
-runtime's native operator interface. PRISM preserves the released API boundary.
+Policy actions do not expose native appraisal settings. Those settings remain
+available through the runtime's native operator interface.
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
+
+[Documentation index](README.md) | [Project README](../README.md)

@@ -1,4 +1,8 @@
-# Install the Linux desktop
+# Installation
+
+[Documentation](README.md) | [First use](first-use.md) | [Support](support.md)
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
 
 The package targets Linux x86-64 with a graphical session. Python 3.12 or later
 installs and verifies it. GNU coreutils supplies the launcher path tools.
@@ -12,6 +16,23 @@ or change host security policy. A host sandbox refusal must be resolved by its o
 AOTX executables, gateway dependencies and models are separate installations.
 Conversations can use an external gateway. The package does not start
 GPU work, download models or create a login startup entry.
+
+## Build from source
+
+Version 0.1.0 is unreleased. A local package can be built from a clean source
+commit; no published application archive is implied.
+
+For source development, use Node.js 22.16 or later, npm and Python 3.12 or later.
+Run these commands from the cloned repository root:
+
+```sh
+npm ci
+npm run build
+npm start
+```
+
+The build compiles the desktop boundary and web interface. It does not download
+AOTX or model files. Follow [first use](first-use.md) to connect a gateway.
 
 ## Verify and install
 
@@ -75,3 +96,7 @@ Development tools, credentials, model files and backend programs are excluded.
 
 Packaging does not create a version tag or publish a release.
 See [version rules](versioning.md) for the release sequence.
+
+<p align="center"><img src="assets/divider.svg" width="720" alt=""></p>
+
+[Documentation index](README.md) | [Project README](../README.md)
