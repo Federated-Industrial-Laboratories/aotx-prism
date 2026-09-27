@@ -7,7 +7,7 @@ The desktop process owns gateway credentials and project database transactions.
 
 ## Gateway contract
 
-The client targets the ordinary inference routes in AOTX 0.3.5:
+The client targets AOTX 0.3.5. Its ordinary inference routes are:
 
 | Route | Use |
 | --- | --- |
@@ -33,6 +33,12 @@ The pending prompt is saved before admission. A returned handle is saved before
 output polling. If a POST response is lost, the client reports uncertainty and
 never retries that POST. A known handle permits safe status reads. Gateway and
 runtime restarts can have different recovery results; ordinary handles are ephemeral.
+
+Shared operations use `/aotx/v1/shared`. A separate local journal retains canonical
+mutations and exact recovery identities before transport. Participant, lineage, sequence,
+operation key and result byte spans are checked before storage or display.
+Shared retries preserve the original body. They do not use ordinary retry rules.
+See [shared workspaces](shared.md) for scopes, receipts, storage limits and stopped-file recovery.
 
 Byte cursors, request identities and epochs are checked before output is applied.
 The client retains raw bytes across UTF-8 boundaries and drains all terminal
@@ -60,7 +66,7 @@ and oversized files are refused. Each path component is opened without following
 | HTTP exchange deadline | 30 seconds; 300 seconds for media upload |
 | Text preview | 128 KiB |
 | Directory view | 128 entries, at most 4,096 inspected entries |
-| Saved layout | 256 KiB, nine known panels |
+| Saved layout | 256 KiB, eleven known panels |
 | Nested folder depth | 16 components |
 | Saved generation profiles | 32 per project |
 | Saved runtime profiles | 32 per desktop account |

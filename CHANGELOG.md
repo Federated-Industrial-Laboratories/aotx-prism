@@ -20,4 +20,8 @@ Target version: 0.1.0.
 - Add exact-model generation profiles, nested project files, names, archive and export.
 - Add advertised JPEG/WAV uploads and explicit gateway source removal.
 
-No application package is published. CCIR workflows are not integrated yet.
+- Add complete shared file creation, inspection, saved shutdown and stopped-file copies.
+- Add stable local participants, scoped spaces, membership and persistent conversations.
+- Add durable mutation journals, exact retries, ordered events and restored-file attachment.
+
+No application package is published. Typed evidence views and control actions remain unavailable.

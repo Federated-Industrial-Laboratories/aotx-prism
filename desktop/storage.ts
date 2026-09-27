@@ -6,6 +6,7 @@ import { lstatSync, mkdirSync, realpathSync, opendirSync, openSync, closeSync,
 import { join, basename } from 'node:path';
 import { MAX_PROJECT, project, relativePath } from '../shared/validate.js';
 import type { Project, FileEntry } from '../shared/types.js';
+import { emptyJournal, journal, type JournalData } from './shared/journal.js';
 export function emptyProject(name: string): Project {
   return { schema: 2, profiles: [], name: name.slice(0, 120) || 'Project', endpoint: '', model: '',
     maxTokens: 128, temperature: 0.7, conversations: [] };
@@ -16,6 +17,7 @@ export class ProjectStore {
   private readonly directoryFd: number;
   private readonly anchoredFolder: string;
   private revision = 0;
+  private sharedRevision = 0;
   constructor(folder: string) {
     this.folder = realpathSync(folder);
     this.directoryFd = openSync(this.folder, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
@@ -46,6 +48,8 @@ export class ProjectStore {
       if (![0, 1, 2].includes(version.user_version)) throw Error('Unsupported project database version.');
       this.db.exec('BEGIN; CREATE TABLE IF NOT EXISTS project (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, data TEXT NOT NULL) STRICT; CREATE TABLE IF NOT EXISTS original_project (version INTEGER PRIMARY KEY, data TEXT NOT NULL) STRICT; PRAGMA user_version=2; COMMIT;');
       this.db.prepare('INSERT OR IGNORE INTO project VALUES (1, 0, ?)').run(JSON.stringify(emptyProject(basename(this.folder))));
+      this.db.exec('CREATE TABLE IF NOT EXISTS shared_journal (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, data TEXT NOT NULL) STRICT;');
+      this.db.prepare('INSERT OR IGNORE INTO shared_journal VALUES (1, 0, ?)').run(JSON.stringify(emptyJournal()));
     } catch (error) { this.db.close(); throw error; }
   }
   private checkFolder(): void {
@@ -73,6 +77,20 @@ export class ProjectStore {
     const result = this.db.prepare('UPDATE project SET data=?, revision=revision+1 WHERE id=1 AND revision=?').run(data, this.revision);
     if (result.changes !== 1) throw Error('Another application changed this project. Reopen it before writing.');
     this.revision++;
+  }
+  readShared(): JournalData {
+    this.checkFolder();
+    const row = this.db.prepare('SELECT revision, CASE WHEN length(CAST(data AS BLOB))<=16777216 THEN data END AS data FROM shared_journal WHERE id=1').get() as { revision: number; data: string };
+    if (!row?.data) throw Error('The shared journal exceeds its storage limit.');
+    const value = journal(JSON.parse(row.data)); this.sharedRevision = row.revision; return value;
+  }
+  writeShared(value: JournalData): void {
+    this.checkFolder(); journal(value);
+    const data = JSON.stringify(value);
+    if (Buffer.byteLength(data) > MAX_PROJECT) throw Error('The shared journal exceeds its storage limit.');
+    const result = this.db.prepare('UPDATE shared_journal SET data=?, revision=revision+1 WHERE id=1 AND revision=?').run(data, this.sharedRevision);
+    if (result.changes !== 1) throw Error('Another application changed the shared journal. Reopen the project.');
+    this.sharedRevision++;
   }
   private directory(path: string) {
     relativePath(path, true); let fd = openSync(this.anchoredFolder, constants.O_RDONLY | constants.O_DIRECTORY);

@@ -4,14 +4,16 @@ import { object, text, number } from './validate.js';
 export interface RuntimeProfile {
   name: string; build: string; gateway: string; python: string; models: string;
   modules: string; folder: string; gpu: string; role: 'language' | 'language-q4' | 'language-audio';
+  ccir?: string; participant?: string;
 }
 export interface RuntimeState {
   phase: 'stopped' | 'starting' | 'ready' | 'stopping' | 'failed';
   folder: string; url: string; logs: string; error: string; profile?: RuntimeProfile;
+  durability?: string;
 }
 export interface Gpu { uuid: string; name: string; freeMiB: number; totalMiB: number }
 export interface RuntimeInspection { version: string; models: string; gpus: Gpu[] }
-export interface LocalCatalog { schema: 1; recent: string[]; runtimes: RuntimeProfile[] }
+export interface LocalCatalog { schema: 1; recent: string[]; runtimes: RuntimeProfile[]; participants?: { id: string; name: string }[] }
 export type SetupCommand =
   | { type: 'runtimeInspect' | 'runtimeSave' | 'runtimeStart'; profile: RuntimeProfile }
   | { type: 'runtimeStop' | 'runtimeConnect' | 'runtimeDevices' }
@@ -33,8 +35,12 @@ export function runtimeProfile(value: unknown): RuntimeProfile {
   if (!['language', 'language-q4', 'language-audio'].includes(role)) throw Error('Select an inference role.');
   const gpu = text(p.gpu, 80);
   if (!/^GPU-[a-fA-F0-9-]{36}$/.test(gpu)) throw Error('Select a GPU UUID from the device list.');
+  const ccir = p.ccir !== undefined ? path('ccir') : undefined;
+  const participant = ccir ? text(p.participant, 32) : undefined;
+  if (participant && (!/^[0-9a-f]{32}$/.test(participant) || /^0+$/.test(participant))) throw Error('Select a local participant.');
   return { name: text(p.name, 80), build: path('build'), gateway: path('gateway'), python: path('python'),
-    models: path('models'), modules: path('modules'), folder: path('folder'), gpu, role: role as RuntimeProfile['role'] };
+    models: ccir ? text(p.models, 2048, true) : path('models'), modules: ccir ? text(p.modules, 2048, true) : path('modules'),
+    folder: path('folder'), gpu, role: role as RuntimeProfile['role'], ...(ccir ? { ccir, participant } : {}) };
 }
 export function setupCommand(row: Record<string, unknown>): SetupCommand | undefined {
   switch (row.type) {

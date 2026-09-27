@@ -23,6 +23,7 @@ function App() {
     <nav className="menu-bar" aria-label="Application menu">
       <button onClick={() => windows.open('project')}>Project</button><button onClick={() => windows.open('connection')}>Connection</button>
       <button onClick={() => windows.open('models')}>Models</button><button onClick={() => windows.open('runtime')}>Runtime setup</button>
+      <button onClick={() => windows.open('shared', false)}>CCIR workspace</button>
       <div className="window-menu"><button aria-expanded={menu} onClick={() => setMenu(!menu)}>Windows</button>
         {menu && <div className="menu-popup" onKeyDown={e => { if (e.key === 'Escape') setMenu(false); }}>
           {(Object.keys(titles) as PanelId[]).map(id => <button key={id} onClick={() => { windows.open(id); setMenu(false); }}>{titles[id]}</button>)}

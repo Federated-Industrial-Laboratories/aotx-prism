@@ -2,6 +2,8 @@
 // Validate persisted project data and view commands before they cross boundaries.
 import type { Command, Project, Turn } from './types.js';
 import { setupCommand } from './setup.js';
+import { sharedCommand } from './shared.js';
+import { ccirCommand } from './ccir.js';
 export const MAX_PROJECT = 16 * 1024 * 1024;
 export const MAX_OUTPUT = 1024 * 1024;
 export const HANDLE = /^req-[0-9a-f]{16}-[0-9a-f]{32}$/;
@@ -96,6 +98,8 @@ export function terminal(turn: Turn): boolean {
 export function command(value: unknown): Command {
   const row = object(value), type = text(row.type, 24);
   const setup = setupCommand(row); if (setup) return setup;
+  const shared = sharedCommand(row); if (shared) return shared;
+  const ccir = ccirCommand(row); if (ccir) return ccir;
   switch (type) {
     case 'state': case 'chooseFolder': case 'disconnect': case 'uploadMedia': case 'listMedia': break;
     case 'files': relativePath(row.path ?? '', true); break;
